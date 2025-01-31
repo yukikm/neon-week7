@@ -1,0 +1,41 @@
+name: Update QA Stand
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ["self-hosted", "k8s-prod"]
+    strategy:
+      matrix:
+        node-version: [22.13.1]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Use Node ${{ matrix.node-version}}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version}}
+
+      - name: Use Yarn
+        run: corepack enable
+
+      - name: Install modules
+        working-directory: ./frontend/swap-ui
+        run: |
+          yarn install
+
+      - name: Build
+        working-directory: ./frontend/swap-ui
+        run: |
+          yarn build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: "6aa89f18f67a9754ebd563ed320efb8b"
+          projectName: "neon-solana-signature-demo"
+          directory: "./frontend/swap-ui/dist"
+          # Optional: Enable this if you want to have GitHub Deployments triggered
+          gitHubToken: ${{ secrets.GHTOKEN }}
