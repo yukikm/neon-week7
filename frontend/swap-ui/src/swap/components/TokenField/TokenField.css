@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+.token-button {
+  @apply py-[4px] px-[14px] rounded-[8px] cursor-pointer relative ml-[-14px];
+  @apply flex flex-row gap-[8px] items-center text-[20px] leading-[20px];
+  &:hover {
+    @apply bg-[#0C111D];
+  }
+}
+
+.token-field {
+  @apply flex flex-row justify-between w-full;
+}
+
+.token-icon {
+  @apply flex flex-row items-center justify-center w-[36px] h-[36px];
+}
+
+.token-field-item {
+  &.icon {
+    @apply flex flex-row gap-[8px] items-center text-[20px] leading-[20px];
+  }
+  &.amount {
+    @apply flex flex-col items-start;
+    & > input {
+      @apply text-[24px] h-[32px] leading-none text-right font-bold appearance-none w-full p-0;
+      &:hover {
+        @apply appearance-none;
+      }
+      &:focus {
+        @apply outline-none;
+      }
+    }
+  }
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}

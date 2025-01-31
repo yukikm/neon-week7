@@ -1,0 +1,10 @@
+.token-item {
+  @apply flex flex-row justify-between items-center w-full cursor-pointer py-[6px] px-[12px] rounded-[6px] transition-all;
+  &:hover {
+    @apply bg-[#161B26];
+  }
+}
+
+.token-content {
+  @apply flex flex-row gap-[8px] items-center;
+}
