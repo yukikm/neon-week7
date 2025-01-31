@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+.tokens-modal {
+  @apply flex flex-col bg-[#0C111D] rounded-lg w-[480px];
+}
+
+.tokens-header {
+  @apply flex flex-row justify-between py-[12px] px-[20px] border-b-1 border-[#1F242F];
+  h3 {
+    @apply text-[20px] mb-0;
+  }
+}
+
+.tokens-content {
+  @apply flex flex-col gap-[4px] py-[12px] px-[12px];
+}
+
+.button-close {
+  @apply flex flex-row justify-between items-center p-[4px] rounded-[8px] cursor-pointer mr-[-2px] relative;
+  &:hover {
+    @apply bg-[#1F242F];
+  }
+}
