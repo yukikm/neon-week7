@@ -28,6 +28,7 @@ jobs:
       - name: Build
         working-directory: ./frontend/swap-ui
         run: |
+          cp .env.example .env
           yarn build
 
       - name: Publish to Cloudflare Pages
