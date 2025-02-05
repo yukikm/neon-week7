@@ -1,3 +1,4 @@
+import { NeonAddress } from '@neonevm/solana-sign';
 import { CSPLToken } from '../models';
 
 export const tokenIcons: Record<string, string> = {
@@ -10,10 +11,11 @@ export const tokenIcons: Record<string, string> = {
   wneon: 'wneon.svg'
 };
 
-export const swap = {
+export const swap: Record<string, NeonAddress> = {
   router: '0x9c58018c0599153cDCF5cEA9F1512f58dcFbF7a6',
   factory: '0x2b76CBDfaE4EC1605E510587815d09343378c633',
   pairs: {
+    'usdc/wneon': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
     'wneon/usdc': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
     'usdc/wsol': '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
     'wneon/v1tok': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31'
@@ -47,6 +49,6 @@ export const tokensList: CSPLToken[] = [
     address_spl: '89dre8rZjLNft7HoupGiyxu3MNftR577ZYu8bHe2kK7g',
     name: 'Wrapped Neon',
     symbol: 'wNEON',
-    decimals: 18
+    decimals: 9
   },
 ];

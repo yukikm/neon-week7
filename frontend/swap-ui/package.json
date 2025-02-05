@@ -11,9 +11,10 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@neonevm/solana-sign": "0.1.0-a2",
+    "@neonevm/solana-sign": "0.1.5-a1",
     "@neonevm/token-transfer-core": "^4.4.2",
     "@neonevm/token-transfer-ethers": "^4.4.2",
+    "@pythnetwork/client": "^2.22.0",
     "@solana/spl-token": "0.4.9",
     "@solana/wallet-adapter-base": "^0.9.23",
     "@solana/wallet-adapter-phantom": "^0.9.24",

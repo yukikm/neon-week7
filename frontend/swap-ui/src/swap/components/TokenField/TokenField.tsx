@@ -13,6 +13,7 @@ type Props = {
   type: 'from' | 'to';
   label: string;
   tokensList: CTokenBalance[];
+  excludedToken: string,
   setTokenData(type: 'from' | 'to', data: { token: string; amount: string; }): void;
 };
 
@@ -23,7 +24,7 @@ export const TokenField: React.FC = ({ data, tokensList, type, label, setTokenDa
     setOpenModal(true);
   };
 
-  const handleCloseModal = (token: CTokenBalance | null): void => {
+  const handleCloseModal = (token?: CTokenBalance): void => {
     if (token) {
       setTokenData(type, { ...data, token: token.token.symbol });
     }
