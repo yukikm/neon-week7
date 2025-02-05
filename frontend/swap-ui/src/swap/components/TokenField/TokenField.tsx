@@ -4,6 +4,9 @@ import { tokenIcons } from '../../../data/tokens.ts';
 import TokensModal from '../TokensModal/TokensModal.tsx';
 import { CTokenBalance } from '../../../models';
 import './TokenField.css';
+import { useProxyConnection } from '../../../wallet/Connection.tsx';
+import { Contract } from 'ethers';
+import { erc20Abi } from '@neonevm/token-transfer-core';
 
 type Props = {
   data: {
@@ -17,23 +20,10 @@ type Props = {
   setTokenData(type: 'from' | 'to', data: { token: string; amount: string; }): void;
 };
 
-export const TokenField: React.FC = ({ data, tokensList, type, label, setTokenData, excludedToken }: Props) => {
+export const TokenField: React.FC = (props: Props) => {
+  const { data, tokensList, type, label, setTokenData, excludedToken } = props;
+  const { provider, solanaUser } = useProxyConnection();
   const [openModal, setOpenModal] = useState(false);
-
-  const handleOpenModal = (): void => {
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = (token?: CTokenBalance): void => {
-    if (token) {
-      setTokenData(type, { ...data, token: token.token.symbol });
-    }
-    setOpenModal(false);
-  };
-
-  const handleInput = (amount: string): void => {
-    setTokenData(type, { amount, token: data.token });
-  };
 
   const tokenIcon = useMemo(() => {
     const symbol = data.token.toLowerCase();
@@ -56,12 +46,43 @@ export const TokenField: React.FC = ({ data, tokensList, type, label, setTokenDa
     return data.token;
   }, [data]);
 
+  const token = useMemo(() => {
+    const symbol = data.token ? data.token : '';
+    const id = tokensList.findIndex(i => i.token.symbol === symbol);
+    if (id > -1) {
+      const token = tokensList[id];
+      return token.token;
+    }
+    return null;
+  }, [data, tokensList]);
+
+  const handleOpenModal = (): void => {
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = (token?: CTokenBalance): void => {
+    if (token) {
+      setTokenData(type, { ...data, token: token.token.symbol });
+    }
+    setOpenModal(false);
+  };
+
+  const handleInput = (amount: string): void => {
+    setTokenData(type, { amount, token: data.token });
+  };
+
+  const handleWallet = async (): Promise<bigint> => {
+
+  };
+
   return (
     <>
       <div className="form-label">
         <label>{label}</label>
         <div className="wallet-amount">
-          <img src="/assets/icons/wallet.svg" alt="" />
+          <button className="button-back" onClick={handleWallet}>
+            <img src="/assets/icons/wallet.svg" alt="" />
+          </button>
           <span className="amount">{tokenBalance}</span>
         </div>
       </div>
@@ -79,7 +100,8 @@ export const TokenField: React.FC = ({ data, tokensList, type, label, setTokenDa
                        placeholder="0.00" />
         </div>
       </div>
-      <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal} closeModal={handleCloseModal} />
+      <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal}
+                   closeModal={handleCloseModal} />
     </>
   );
 };

@@ -7,15 +7,19 @@ import { PublicKey, Transaction } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import {
   createScheduledNeonEvmMultipleTransaction,
-  createScheduledNeonEvmTransaction, logJson,
-  MultipleTransactions,
+  createScheduledNeonEvmTransaction,
+  EstimateScheduledTransaction,
+  logJson,
+  MultipleTransactions, NeonProxyRpcApi,
   NO_CHILD_INDEX,
-  ScheduledTransaction
+  ScheduledTransaction,
+  SolanaNeonAccount
 } from '@neonevm/solana-sign';
-import { SPLToken, toFullAmount } from '@neonevm/token-transfer-core';
-import { Interface, parseUnits } from 'ethers';
+import { erc20Abi, SPLToken, toFullAmount } from '@neonevm/token-transfer-core';
+import { Contract, Interface, JsonRpcProvider, parseUnits } from 'ethers';
 import { pancakeSwapAbi } from '../data/pancakeSwap';
 import {
+  CSPLToken,
   SwapTokenMultipleData,
   SwapTokensData,
   SwapTokensResponse,
@@ -71,9 +75,9 @@ export async function swapTokens(data: SwapTokenMultipleData): Promise<SwapToken
 
   if (error) {
     console.log(error);
-    throw new Error(error.message);
+    logJson(error.message);
   }
-  console.log(result);
+  logJson(result);
 
   const maxFeePerGas = result?.maxFeePerGas;
   const maxPriorityFeePerGas = result?.maxPriorityFeePerGas;
@@ -151,8 +155,9 @@ export async function transferTokenToNeonEvm(data: TransferTokenData): Promise<T
     nonce
   } = data;
 
+  const fullAmount = toFullAmount(amount, token.decimals);
   const tokenATA = getAssociatedTokenAddressSync(new PublicKey(token.address_spl), solanaUser.publicKey);
-  const climeData = claimTransactionData(tokenATA, solanaUser.neonWallet, amount);
+  const climeData = claimTransactionData(tokenATA, solanaUser.neonWallet, fullAmount);
 
   const { result, error } = await proxyApi.estimateScheduledGas({
     scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
@@ -164,10 +169,10 @@ export async function transferTokenToNeonEvm(data: TransferTokenData): Promise<T
   });
 
   if (error) {
-    throw new Error(error);
+    logJson(error);
   }
 
-  console.log(result);
+  logJson(result);
 
   const maxFeePerGas = result?.maxFeePerGas;
   const maxPriorityFeePerGas = result?.maxPriorityFeePerGas;
@@ -228,10 +233,10 @@ export async function approveToken(data: SwapTokensData): Promise<Transaction> {
   });
 
   if (error) {
-    throw new Error(error.message);
+    logJson(error);
   }
 
-  console.log(result);
+  logJson(result);
 
   const maxFeePerGas = result?.maxFeePerGas;
   const maxPriorityFeePerGas = result?.maxPriorityFeePerGas;
@@ -275,55 +280,60 @@ export async function approveTokens(data: SwapTokensData): Promise<SwapTokensRes
   // const approvePairData = erc20ForSPLContract().encodeFunctionData('approve', [pancakePair, parseUnits(amount.toString(), tokenFrom.decimals)]);
   const approveTokenFromData = erc20ForSPLContract().encodeFunctionData('approve', [pancakeRouter, parseUnits(amount.toString(), tokenFrom.decimals)]);
   const approveTokenToData = erc20ForSPLContract().encodeFunctionData('approve', [pancakeRouter, parseUnits(amount.toString(), tokenTo.decimals)]);
+  const approvePairFromData = erc20ForSPLContract().encodeFunctionData('approve', [pancakePair, parseUnits(amount.toString(), tokenFrom.decimals)]);
+  const approvePairToData = erc20ForSPLContract().encodeFunctionData('approve', [pancakePair, parseUnits(amount.toString(), tokenTo.decimals)]);
+
+  const transactions: EstimateScheduledTransaction[] = [{
+    from: solanaUser.neonWallet,
+    to: tokenFrom.address,
+    data: approveTokenFromData
+  }, {
+    from: solanaUser.neonWallet,
+    to: tokenTo.address,
+    data: approveTokenToData
+  }, {
+    from: solanaUser.neonWallet,
+    to: tokenFrom.address,
+    data: approvePairFromData
+  }, {
+    from: solanaUser.neonWallet,
+    to: tokenTo.address,
+    data: approvePairToData
+  }];
 
   const { result, error } = await proxyApi.estimateScheduledGas({
     scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
-    transactions: [{
-      from: solanaUser.neonWallet,
-      to: tokenFrom.address,
-      data: approveTokenFromData
-    },  {
-      from: solanaUser.neonWallet,
-      to: tokenFrom.address,
-      data: approveTokenToData
-    }]
+    transactions
   });
 
   if (error) {
-    throw new Error(error.message);
+    logJson(error);
   }
 
-  console.log(result);
+  logJson(result);
 
   const maxFeePerGas = result?.maxFeePerGas;
   const maxPriorityFeePerGas = result?.maxPriorityFeePerGas;
   const gasLimit = result?.gasList;
-  const transactionPair = new ScheduledTransaction({
-    nonce: nonce,
-    payer: solanaUser.neonWallet,
-    index: 0,
-    target: tokenFrom.address,
-    callData: approveTokenFromData,
-    gasLimit: gasLimit[0],
-    maxFeePerGas: maxFeePerGas,
-    maxPriorityFeePerGas: maxPriorityFeePerGas,
-    chainId: chainId
-  });
-  const transactionRouter = new ScheduledTransaction({
-    nonce: nonce,
-    payer: solanaUser.neonWallet,
-    index: 1,
-    target: tokenFrom.address,
-    callData: approveTokenToData,
-    gasLimit: gasLimit[1],
-    maxFeePerGas: maxFeePerGas,
-    maxPriorityFeePerGas: maxPriorityFeePerGas,
-    chainId: chainId
-  });
-
   const multiple = new MultipleTransactions(nonce, maxFeePerGas, maxPriorityFeePerGas);
-  multiple.addTransaction(transactionPair, NO_CHILD_INDEX, 0);
-  multiple.addTransaction(transactionRouter, NO_CHILD_INDEX, 0);
+
+  const scheduledTransactions: ScheduledTransaction[] = [];
+  for (let i = 0; i < transactions.length; i++) {
+    const trx = transactions[i];
+    const scheduledTransaction = new ScheduledTransaction({
+      index: i,
+      nonce: nonce,
+      payer: trx.from,
+      target: trx.to,
+      callData: trx.data,
+      gasLimit: gasLimit[i],
+      maxFeePerGas: maxFeePerGas,
+      maxPriorityFeePerGas: maxPriorityFeePerGas,
+      chainId: chainId
+    });
+    multiple.addTransaction(scheduledTransaction, NO_CHILD_INDEX, 0);
+    scheduledTransactions.push(scheduledTransaction);
+  }
 
   // [1] scheduled trx
   const scheduledTransaction = await createScheduledNeonEvmMultipleTransaction({
@@ -338,11 +348,8 @@ export async function approveTokens(data: SwapTokensData): Promise<SwapTokensRes
 
   return {
     scheduledTransaction,
-    transactions: [
-      transactionPair,
-      transactionRouter
-    ]
-  }
+    transactions: scheduledTransactions
+  };
 }
 
 export async function pancakeTokensSwap(data: SwapTokensData): Promise<Transaction> {
@@ -381,9 +388,11 @@ export async function pancakeTokensSwap(data: SwapTokensData): Promise<Transacti
 
   logJson(result);
 
-  const maxFeePerGas = 35e8; // result?.maxFeePerGas ;
-  const maxPriorityFeePerGas = 25e8; // result?.maxPriorityFeePerGas;
-  const gasLimit = 1e5; // result?.gasList[0];
+  const maxFeePerGas = result?.maxFeePerGas ?? 3000000000;
+  const maxPriorityFeePerGas = result?.maxPriorityFeePerGas ?? 2500000000;
+  const gasLimit = result?.gasList[0] ?? 1e5;
+
+  console.log(maxFeePerGas, maxPriorityFeePerGas, gasLimit);
   const transaction = new ScheduledTransaction({
     nonce: nonce,
     payer: solanaUser.neonWallet,
@@ -404,4 +413,56 @@ export async function pancakeTokensSwap(data: SwapTokensData): Promise<Transacti
     neonWalletNonce: nonce,
     neonTransaction: transaction.serialize()
   });
+}
+
+export async function handleTokensBack(provider: JsonRpcProvider, neonEvmProgram: PublicKey, proxyApi: NeonProxyRpcApi, solanaUser: SolanaNeonAccount, token: CSPLToken): Promise<void> {
+  console.log(token);
+  if (token) {
+    const contract = new Contract(token.address, erc20Abi, provider);
+    const balance = await contract.balanceOf(solanaUser.neonWallet);
+    if (balance) {
+      const ata = getAssociatedTokenAddressSync(new PublicKey(token.address_spl), solanaUser.publicKey);
+      const data = mintNeonTransactionData(ata, token as SPLToken, balance);
+      const { result, error } = await proxyApi.estimateScheduledGas({
+        scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
+        transactions: [{
+          from: solanaUser.neonWallet,
+          to: token.address,
+          data
+        }]
+      });
+
+      logJson(result);
+      logJson(error);
+
+      const nonce = 1;
+      const chainId = 1;
+      const maxFeePerGas = result?.maxFeePerGas;
+      const maxPriorityFeePerGas = result?.maxPriorityFeePerGas;
+      const gasLimit = result?.gasList[0];
+      const scheduledTransaction = new ScheduledTransaction({
+        nonce: nonce,
+        payer: solanaUser.neonWallet,
+        index: 0,
+        target: token.address,
+        callData: data,
+        maxFeePerGas: maxFeePerGas,
+        maxPriorityFeePerGas: maxPriorityFeePerGas,
+        gasLimit: gasLimit,
+        chainId: chainId
+      });
+
+      console.log(scheduledTransaction.data);
+
+      return createScheduledNeonEvmTransaction({
+        chainId: chainId,
+        signerAddress: solanaUser.publicKey,
+        tokenMintAddress: solanaUser.tokenMint,
+        neonEvmProgram: neonEvmProgram,
+        neonWallet: solanaUser.neonWallet,
+        neonWalletNonce: nonce,
+        neonTransaction: scheduledTransaction.serialize()
+      });
+    }
+  }
 }

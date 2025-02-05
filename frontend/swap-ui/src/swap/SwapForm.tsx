@@ -96,6 +96,7 @@ export const SwapForm: React.FC = () => {
       const pancakePair = swap.pairs[pair];
       const pancakeRouter: NeonAddress = swap.router;
       console.log(pair, pancakePair);
+      console.log(tokenAmount, amountFrom);
 
       const run = true;
 
@@ -121,10 +122,10 @@ export const SwapForm: React.FC = () => {
           neonEvmProgram
         });
 
-        const signature = await sendTransaction(scheduledTransaction);
+        await sendTransaction(scheduledTransaction);
 
-        const response = await proxyApi.waitTransactionByHash(signature, 5e3);
-        console.log(response);
+        // const response = await proxyApi.waitTransactionByHash(signature, 5e3);
+        // console.log(response);
 
         const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
         console.log(transactionExecution);
@@ -183,10 +184,10 @@ export const SwapForm: React.FC = () => {
           pancakeRouter
         });
 
-        const signature = await sendTransaction(scheduledTransaction);
+        await sendTransaction(scheduledTransaction);
 
-        const response = await proxyApi.waitTransactionByHash(signature, 5e3);
-        console.log(response);
+        // const response = await proxyApi.waitTransactionByHash(signature, 5e3);
+        // console.log(response);
 
         const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
         console.log(transactionExecution);
