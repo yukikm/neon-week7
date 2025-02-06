@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
-    "@neonevm/solana-sign": "/Users/able/projects/work/neon/curve/neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.5-a6.tgz",
+    "@neonevm/solana-sign": "^0.1.5-a7",
     "@neonevm/token-transfer-core": "^4.4.2",
     "@neonevm/token-transfer-ethers": "^4.4.2",
     "@pythnetwork/client": "^2.22.0",

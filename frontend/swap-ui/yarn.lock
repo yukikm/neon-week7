@@ -883,20 +883,10 @@
   resolved "https://registry.yarnpkg.com/@mobily/ts-belt/-/ts-belt-3.13.1.tgz#8f8ce2a2eca41d88c2ca70c84d0f47d0f7f5cd5f"
   integrity sha512-K5KqIhPI/EoCTbA6CGbrenM9s41OouyK8A03fGJJcla/zKucsgLbz8HNbeseoLarRPgyWJsUyCYqFhI7t3Ra9Q==
 
-"@neonevm/solana-sign@/Users/able/projects/work/neon/curve/neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.5-a6.tgz":
-  version "0.1.5-a6"
-  resolved "/Users/able/projects/work/neon/curve/neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.5-a6.tgz#508fb0927f5e7259d6692afd20a28d10176bc54b"
-  dependencies:
-    "@solana/spl-token" "0.4.9"
-    "@solana/web3.js" "^1.98.0"
-    big.js "^6.2.2"
-    ethers "^6.13.5"
-    fetch-retry "^6.0.0"
-    token-list "https://github.com/neonlabsorg/token-list.git#v5.8.5"
-
-"@neonevm/solana-sign@file:../../../neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.5-a5.tgz":
-  version "0.1.5-a5"
-  resolved "file:../../../neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.5-a5.tgz#d6288783155d9793f22c85e61eac6b184602efe6"
+"@neonevm/solana-sign@^0.1.5-a7":
+  version "0.1.5-a7"
+  resolved "https://registry.yarnpkg.com/@neonevm/solana-sign/-/solana-sign-0.1.5-a7.tgz#298a27001231c0cff2d204fff00b25b9fdc92b35"
+  integrity sha512-hS91H/r6kiRY/jdQt2UC5z6WhfIwcvuBG5LNBP9GYslfsfDLkrR8fOR3eGPvwj22s+LMp9ZobPLefq/3dfupKw==
   dependencies:
     "@solana/spl-token" "0.4.9"
     "@solana/web3.js" "^1.98.0"
@@ -6558,9 +6548,9 @@ toggle-selection@^1.0.6:
   resolved "https://registry.yarnpkg.com/toggle-selection/-/toggle-selection-1.0.6.tgz#6e45b1263f2017fa0acc7d89d78b15b8bf77da32"
   integrity sha512-BiZS+C1OS8g/q2RRbJmy59xpyghNBqrr6k5L/uKBGRsTfxmu3ffiRnd8mlGPUVayg8pvfi5urfnu8TU7DVOkLQ==
 
-"token-list@https://github.com/neonlabsorg/token-list.git#v5.8.5":
+"token-list@git+https://github.com/neonlabsorg/token-list.git#v5.8.5":
   version "0.0.0"
-  resolved "https://github.com/neonlabsorg/token-list.git#314ced2a16004577477159b49cc17f8e97848721"
+  resolved "git+https://github.com/neonlabsorg/token-list.git#314ced2a16004577477159b49cc17f8e97848721"
 
 toml@^3.0.0:
   version "3.0.0"
