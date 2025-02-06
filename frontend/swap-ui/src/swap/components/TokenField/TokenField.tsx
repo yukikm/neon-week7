@@ -5,8 +5,7 @@ import TokensModal from '../TokensModal/TokensModal.tsx';
 import { CTokenBalance } from '../../../models';
 import './TokenField.css';
 import { useProxyConnection } from '../../../wallet/Connection.tsx';
-import { Contract } from 'ethers';
-import { erc20Abi } from '@neonevm/token-transfer-core';
+import { handleTokensBack } from '../../../api/swap.ts';
 
 type Props = {
   data: {
@@ -22,7 +21,14 @@ type Props = {
 
 export const TokenField: React.FC = (props: Props) => {
   const { data, tokensList, type, label, setTokenData, excludedToken } = props;
-  const { provider, solanaUser } = useProxyConnection();
+  const {
+    provider,
+    proxyApi,
+    neonEvmProgram,
+    solanaUser,
+    chainId,
+    sendTransaction
+  } = useProxyConnection();
   const [openModal, setOpenModal] = useState(false);
 
   const tokenIcon = useMemo(() => {
@@ -72,7 +78,22 @@ export const TokenField: React.FC = (props: Props) => {
   };
 
   const handleWallet = async (): Promise<bigint> => {
+    const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
 
+    const transaction = await handleTokensBack({
+      provider,
+      proxyApi,
+      neonEvmProgram,
+      solanaUser,
+      token: token!,
+      nonce,
+      chainId
+    });
+    if (transaction) {
+      await sendTransaction(transaction);
+      const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
+      console.log(transactionExecution);
+    }
   };
 
   return (

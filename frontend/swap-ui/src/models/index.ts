@@ -1,12 +1,13 @@
 import React from 'react';
 import { SPLToken } from '@neonevm/token-transfer-core';
-import { PublicKey, TokenAmount, Transaction } from '@solana/web3.js';
+import { Connection, PublicKey, TokenAmount, Transaction } from '@solana/web3.js';
 import {
   NeonAddress,
   NeonProxyRpcApi,
-  ScheduledTransaction,
+  ScheduledTransaction, ScheduledTreeAccount,
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
+import { JsonRpcProvider } from 'ethers';
 
 export type Props = {
   readonly children: React.ReactNode;
@@ -20,7 +21,13 @@ export interface CSPLToken extends SPLToken {
 export interface CTokenBalance {
   token: CSPLToken;
   balance?: TokenAmount;
-  neonBalance?: any;
+  neonBalance?: bigint;
+}
+
+export interface TransactionGas {
+  gasLimit: number[];
+  maxFeePerGas: number;
+  maxPriorityFeePerGas: number;
 }
 
 export interface SwapTokenMultipleData {
@@ -37,9 +44,35 @@ export interface SwapTokenMultipleData {
   nonce: number;
 }
 
+export interface SwapTokenCommonData {
+  transactionGas: TransactionGas;
+  proxyApi: NeonProxyRpcApi;
+  provider: JsonRpcProvider;
+  connection: Connection;
+  solanaUser: SolanaNeonAccount;
+  neonEvmProgram: PublicKey;
+  tokenFrom: CSPLToken;
+  tokenTo: CSPLToken;
+  pancakeRouter: NeonAddress;
+  pancakePair: NeonAddress;
+  chainId: number;
+  amountFrom: number;
+  amountTo: number;
+  nonce: number;
+}
+
 export interface SwapTokensResponse {
   scheduledTransaction: Transaction,
   transactions: ScheduledTransaction[]
+}
+
+export interface FormState {
+  id: number;
+  title: string;
+  status: string;
+  method: (nonce: number, transactionGas: TransactionGas) => SwapTokensResponse;
+  gas: TransactionGas;
+  data?: ScheduledTreeAccount;
 }
 
 export interface TransferTokenData {
@@ -49,6 +82,16 @@ export interface TransferTokenData {
   token: CSPLToken;
   chainId: number;
   amount: number;
+  nonce: number;
+}
+
+export interface TransferTokenToSolanaData {
+  proxyApi: NeonProxyRpcApi;
+  provider: JsonRpcProvider;
+  solanaUser: SolanaNeonAccount;
+  neonEvmProgram: PublicKey;
+  token: CSPLToken;
+  chainId: number;
   nonce: number;
 }
 

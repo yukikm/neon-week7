@@ -18,7 +18,9 @@ export const swap: Record<string, NeonAddress> = {
     'usdc/wneon': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
     'wneon/usdc': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
     'usdc/wsol': '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
-    'wneon/v1tok': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31'
+    'wsol/usdc': '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
+    'wneon/v1token': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31',
+    'v1token/wneon': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31'
   }
 };
 
@@ -41,7 +43,7 @@ export const tokensList: CSPLToken[] = [
     address: '0x7a8F86eB7f15111c6bD2BfC57c7616fC12D56284',
     address_spl: `5UMhuc2A58xPAPdtLGuYt7SyEQ1pRnyEGDf1fdzJGe4U`, // ???
     name: 'Token v1',
-    symbol: 'v1TOK',
+    symbol: 'v1TOKEN',
     decimals: 9
   },
   {

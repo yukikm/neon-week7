@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+.form-state {
+  @apply flex flex-col mb-[20px];
+
+  &:last-of-type {
+    @apply mb-0;
+  }
+}
+
+.form-state-title {
+  @apply flex flex-row justify-between gap-[8px];
+}
+
+.form-state-loading {
+  @apply flex flex-row items-center justify-center w-[30px] h-[30px];
+
+  .loading {
+    @apply animate-spin;
+  }
+}
+
+.form-state-body {
+  @apply flex flex-col gap-[8px];
+}
+
+.form-state-transaction {
+  @apply flex flex-row justify-between text-[12px];
+}
