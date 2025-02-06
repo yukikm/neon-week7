@@ -1,28 +1,30 @@
 import React, { FC, useMemo } from 'react';
 import { FormState } from '../../../models';
 import './SwapState.css';
+import { ScheduledTransactionStatus } from '@neonevm/solana-sign/dist/types/models/api';
 
 
 const Status: FC = ({ formState, loading }: { formState: FormState, loading: boolean }) => {
   const status = useMemo(() => {
-    if (loading) {
-      const data = formState.data;
-      if (data) {
-        switch (data.activeStatus) {
-          case 'NoStarted':
-            return 'loading-gray';
-          case 'InProgress':
-            return 'loading';
-          case 'Success':
-            return 'success';
-          case 'Empty':
-          case 'Failed':
-            return 'warning';
-        }
+    const data = formState.data;
+    if (data) {
+      switch (data.activeStatus) {
+        case 'NoStarted':
+          return 'loading-gray';
+        case 'InProgress':
+          return 'loading';
+        case 'Success':
+          return 'success';
+        case 'Empty':
+        case 'Failed':
+        case 'Skipped':
+          return 'warning';
       }
+    }
+    if (loading) {
       return `loading-gray`;
     }
-    return '';
+    return ``;
   }, [formState.data, loading]);
 
   return (
@@ -37,14 +39,39 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
   );
 };
 
-function SwapState({ formState, loading }: { formState: FormState, loading: boolean }) {
+function SwapState({ formState, loading, executeState, transactionCancel }: {
+  formState: FormState,
+  loading: boolean,
+  executeState: (state: FormState) => Promise<void>
+  transactionCancel: (state: ScheduledTransactionStatus) => Promise<void>
+}) {
+  const show = false;
+  const handleCancel = async (trx: ScheduledTransactionStatus): Promise<void> => {
+    if (!loading) {
+      await transactionCancel(trx);
+    }
+  };
+
+  const handleStart = async (): Promise<void> => {
+    if (!loading) {
+      await executeState(formState);
+    }
+  };
+
+  const canRestart = useMemo(() => {
+    return !loading && ['Empty', 'Failed', 'Skipped', 'NotStarted'].includes(formState.status);
+  }, [loading, formState]);
 
   return (
     <div className="form-state">
       <div className="form-state-title">
-        <div className="form-state-title-item title">{formState.id + 1} {formState.title}</div>
+        <div className="form-state-title-item title">
+          <div className='form-state-number'>{formState.id + 1}</div>
+          <div className="title">{formState.title}</div>
+        </div>
         <div className="form-state-title-item loading">
-          <Status formState={formState} loading={loading}></Status>
+          {canRestart && <button className={'button-restart'} onClick={handleStart}>Restart</button>}
+          <Status formState={formState} loading={loading} />
         </div>
       </div>
       <div className="form-state-body">
@@ -52,7 +79,11 @@ function SwapState({ formState, loading }: { formState: FormState, loading: bool
           {formState.data.transactions.map((trx, key) => {
             return <div className="form-state-transaction" key={key}>
               <div className="transaction-item">{trx.transactionHash}</div>
-              <div className="transaction-item">{trx.status}</div>
+              <div className="transaction-item">
+                {show && trx.status === 'NotStarted' &&
+                  <button onClick={() => handleCancel(trx)}>x</button>}
+                <div>{trx.status}</div>
+              </div>
             </div>;
           })}
         </>}

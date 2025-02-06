@@ -883,10 +883,10 @@
   resolved "https://registry.yarnpkg.com/@mobily/ts-belt/-/ts-belt-3.13.1.tgz#8f8ce2a2eca41d88c2ca70c84d0f47d0f7f5cd5f"
   integrity sha512-K5KqIhPI/EoCTbA6CGbrenM9s41OouyK8A03fGJJcla/zKucsgLbz8HNbeseoLarRPgyWJsUyCYqFhI7t3Ra9Q==
 
-"@neonevm/solana-sign@^0.1.5-a7":
-  version "0.1.5-a7"
-  resolved "https://registry.yarnpkg.com/@neonevm/solana-sign/-/solana-sign-0.1.5-a7.tgz#298a27001231c0cff2d204fff00b25b9fdc92b35"
-  integrity sha512-hS91H/r6kiRY/jdQt2UC5z6WhfIwcvuBG5LNBP9GYslfsfDLkrR8fOR3eGPvwj22s+LMp9ZobPLefq/3dfupKw==
+"@neonevm/solana-sign@^0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@neonevm/solana-sign/-/solana-sign-0.1.5.tgz#c8eefd26342bc43dab505b331617c302ea87858a"
+  integrity sha512-+UWVb59ceEMRiADIOS+1oO5WwIheXDUMDx3A8Q94VzUHLrVinMK76XfJ93crOVM8qu+tCMD+bf/48+w3AOxwLA==
   dependencies:
     "@solana/spl-token" "0.4.9"
     "@solana/web3.js" "^1.98.0"

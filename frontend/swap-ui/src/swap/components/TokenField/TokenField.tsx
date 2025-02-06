@@ -6,6 +6,7 @@ import { CTokenBalance } from '../../../models';
 import './TokenField.css';
 import { useProxyConnection } from '../../../wallet/Connection.tsx';
 import { handleTokensBack } from '../../../api/swap.ts';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 type Props = {
   data: {
@@ -29,6 +30,7 @@ export const TokenField: React.FC = (props: Props) => {
     chainId,
     sendTransaction
   } = useProxyConnection();
+  const { publicKey } = useWallet();
   const [openModal, setOpenModal] = useState(false);
 
   const tokenIcon = useMemo(() => {
@@ -78,21 +80,23 @@ export const TokenField: React.FC = (props: Props) => {
   };
 
   const handleWallet = async (): Promise<bigint> => {
-    const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
+    if (publicKey) {
+      const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
 
-    const transaction = await handleTokensBack({
-      provider,
-      proxyApi,
-      neonEvmProgram,
-      solanaUser,
-      token: token!,
-      nonce,
-      chainId
-    });
-    if (transaction) {
-      await sendTransaction(transaction);
-      const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
-      console.log(transactionExecution);
+      const transaction = await handleTokensBack({
+        provider,
+        proxyApi,
+        neonEvmProgram,
+        solanaUser,
+        token: token!,
+        nonce,
+        chainId
+      });
+      if (transaction) {
+        await sendTransaction(transaction);
+        const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
+        console.log(transactionExecution);
+      }
     }
   };
 
@@ -117,8 +121,8 @@ export const TokenField: React.FC = (props: Props) => {
           </button>
         </div>
         <div className="token-field-item amount w-full">
-          <AmountInput decimalsLimit={9} max={10} onValueChange={handleInput} value={data.amount}
-                       placeholder="0.00" />
+          <AmountInput decimalsLimit={9} max={1} onValueChange={handleInput} value={data.amount}
+                       placeholder="0.00" disabled />
         </div>
       </div>
       <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal}

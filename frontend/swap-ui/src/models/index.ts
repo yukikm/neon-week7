@@ -8,6 +8,7 @@ import {
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
 import { JsonRpcProvider } from 'ethers';
+import { TransactionStatus } from '@neonevm/solana-sign/dist/types/models/api';
 
 export type Props = {
   readonly children: React.ReactNode;
@@ -69,9 +70,9 @@ export interface SwapTokensResponse {
 export interface FormState {
   id: number;
   title: string;
-  status: string;
-  method: (nonce: number, transactionGas: TransactionGas) => SwapTokensResponse;
-  gas: TransactionGas;
+  status: TransactionStatus;
+  method: (nonce: number, transactionGas: TransactionGas) => Promise<SwapTokensResponse>;
+  gas?: TransactionGas;
   data?: ScheduledTreeAccount;
 }
 
