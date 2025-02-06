@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import Modal from 'react-modal';
 import './TokensModal.css';
 import { CTokenBalance } from '../../../models';
@@ -7,8 +7,8 @@ import TokenItem from '../TokenItem/TokenItem.tsx';
 Modal.setAppElement('#root');
 
 function TokensModal({ openModal, closeModal, tokensList, excludedToken }: {
-  openModal,
-  closeModal,
+  openModal: boolean,
+  closeModal: <T>(t?: T) => void,
   tokensList: CTokenBalance[],
   excludedToken: string,
 }) {
