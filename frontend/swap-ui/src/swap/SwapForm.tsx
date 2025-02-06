@@ -124,9 +124,9 @@ export const SwapForm: React.FC = () => {
         status: `NoStarted`,
         method: approveSwap,
         gas: {
-          gasLimit: [5e4, 5e4, 5e4, 5e4],
-          maxFeePerGas: 1850000000,
-          maxPriorityFeePerGas: 1250000000
+          gasLimit: [1e5, 1e5, 1e5, 1e5, 1e5],
+          maxFeePerGas: 2500000000,
+          maxPriorityFeePerGas: 2000000000
         }
       };
       const swapState: FormState = {
@@ -137,7 +137,7 @@ export const SwapForm: React.FC = () => {
         gas: {
           gasLimit: [1e5],
           maxFeePerGas: 2500000000,
-          maxPriorityFeePerGas: 1500000000
+          maxPriorityFeePerGas: 2200000000
         }
       };
       const states = [approveState, swapState];
@@ -286,7 +286,7 @@ export const SwapForm: React.FC = () => {
 
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
-    return from.amount?.length === 0 || to.amount?.length === 0;
+    return !from.amount || !to.amount;
   }, [formData]);
 
   const buttonText = useMemo((): string => {
@@ -378,7 +378,7 @@ export const SwapForm: React.FC = () => {
       <div className="form-group">
         <div className="form-field">
           <button className="form-button" onClick={handleSubmit}
-                  disabled={formValidation || loading}>
+                  disabled={!publicKey || formValidation || loading}>
             {buttonText}
           </button>
         </div>
