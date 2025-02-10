@@ -29,7 +29,7 @@ const Header = () => {
     <div className={'flex flex-row items-left justify-between w-full max-w-2xl p-2'}>
       <div className="logo">
         <img src="/assets/logo.svg" width="32" height="32" alt="Neon" />
-        <span>Neon <strong>Swap</strong></span>
+        <span><strong>Swap</strong> Demo</span>
       </div>
       <div className={'flex flex-row gap-[8px] items-center'}>
         <div className="balance">{balance > 0 && `${(balance / LAMPORTS_PER_SOL).toFixed(6)} SOL`}</div>

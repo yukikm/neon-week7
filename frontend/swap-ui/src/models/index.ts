@@ -71,6 +71,7 @@ export interface FormState {
   id: number;
   title: string;
   isCompleted: boolean;
+  signature?: string;
   status: TransactionStatus;
   method: (nonce: number, transactionGas: TransactionGas) => Promise<SwapTokensResponse>;
   gas?: TransactionGas;

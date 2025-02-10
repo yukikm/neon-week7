@@ -43,8 +43,9 @@ export const SwapForm: React.FC = () => {
 
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
-    return !from.amount || !to.amount;
-  }, [formData]);
+    const tokenFrom = tokenBalanceList.find(t => t.token.symbol === formData.from.token)!;
+    return !from.amount || !to.amount || !tokenFrom.balance?.amount;
+  }, [formData, tokenBalanceList]);
 
   const buttonText = useMemo((): string => {
     const { from, to } = formData;
@@ -154,10 +155,14 @@ export const SwapForm: React.FC = () => {
       const { scheduledTransaction, transactions } = await state.method(nonce, {
         maxPriorityFeePerGas: a,
         maxFeePerGas: b,
-        gasLimit: [1500000, 1500000, 1500000]
+        gasLimit: [1e7, 1e7, 1e7] // 10_000_000
       });
       changeTransactionStates(state);
-      await sendTransaction(scheduledTransaction);
+      const signature = await sendTransaction(scheduledTransaction);
+      if (signature) {
+        state.signature = signature;
+        changeTransactionStates(state);
+      }
 
       const results = [];
       for (const transaction of transactions) {
@@ -208,7 +213,8 @@ export const SwapForm: React.FC = () => {
       const approveState: FormState = {
         id: 0,
         title: `Approve`,
-        status: `NoStarted`,
+        status: `NotStarted`,
+        signature: ``,
         isCompleted: false,
         method: approveSwap,
         data: undefined
@@ -216,7 +222,8 @@ export const SwapForm: React.FC = () => {
       const swapState: FormState = {
         id: 1,
         title: `Swap tokens`,
-        status: `NoStarted`,
+        status: `NotStarted`,
+        signature: ``,
         isCompleted: false,
         method: tokensSwap,
         data: undefined

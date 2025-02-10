@@ -9,7 +9,7 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
     const data = formState.data;
     if (data) {
       switch (data.activeStatus) {
-        case 'NoStarted':
+        case 'NotStarted':
           return 'loading-gray';
         case 'InProgress':
           return 'loading';
@@ -60,6 +60,7 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
       formState.status = 'NotStarted';
       formState.isCompleted = false;
       formState.data = undefined;
+      formState.signature = '';
       await executeState(formState);
       setLoading(false);
     }
@@ -70,7 +71,7 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
   }, [loading, formState]);
 
   const canStart = useMemo(() => {
-    return !loading && ['NoStarted'].includes(formState.status);
+    return !loading && ['NotStarted'].includes(formState.status);
   }, [loading, formState]);
 
   const showLink = (trx: ScheduledTransactionStatus): boolean => {
@@ -83,6 +84,10 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
         <div className="form-state-title-item title">
           <div className="form-state-number">{formState.id + 1}</div>
           <div className="title">{formState.title}</div>
+          {formState.signature?.length > 0 &&
+            <a href={`https://solscan.io/tx/${formState.signature}?cluster=devnet`} target="_blank">
+              <img src="/assets/solscan.webp" width={18} height={18} alt="" />
+            </a>}
         </div>
         <div className="form-state-title-item loading">
           {canRestart &&
