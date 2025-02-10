@@ -44,7 +44,7 @@ export const SwapForm: React.FC = () => {
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
     const tokenFrom = tokenBalanceList.find(t => t.token.symbol === formData.from.token)!;
-    return !from.amount || !to.amount || !tokenFrom.balance?.amount;
+    return !from.amount || !to.amount || !tokenFrom?.balance?.amount;
   }, [formData, tokenBalanceList]);
 
   const buttonText = useMemo((): string => {
