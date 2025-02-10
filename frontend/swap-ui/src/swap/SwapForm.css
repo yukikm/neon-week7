@@ -8,6 +8,14 @@
   }
 }
 
+.form-error {
+  @apply p-6 bg-[#F04438] text-white rounded-lg mb-[20px];
+
+  &:last-of-type {
+    @apply mb-0;
+  }
+}
+
 .form-label {
   @apply flex flex-row justify-between text-[16px] font-bold mb-[2px];
 }

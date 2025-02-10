@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 .form-state {
-  @apply flex flex-col mb-[20px];
+  @apply flex flex-col mb-[20px] gap-[10px];
 
   &:last-of-type {
     @apply mb-0;
@@ -9,10 +9,7 @@
 }
 
 .form-state-title {
-  @apply flex flex-row justify-between gap-[8px] mb-[5px];
-  &:last-of-type {
-    @apply mb-0;
-  }
+  @apply flex flex-row justify-between gap-[8px];
 }
 
 .form-state-title-item {

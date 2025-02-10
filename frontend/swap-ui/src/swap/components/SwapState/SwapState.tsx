@@ -28,20 +28,23 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
   }, [formState.data, loading]);
 
   return (
-    <div className="form-state-loading">
-      {status === 'loading-gray' &&
-        <img className="loading" src="/assets/icons/loading-gray.svg" alt="Loading..." />}
-      {status === 'loading' &&
-        <img className="loading" src="/assets/icons/loading.svg" alt="Loading..." />}
-      {status === 'success' && <img src="/assets/icons/check.svg" alt="Success" />}
-      {status === 'warning' && <img src="/assets/icons/warning.svg" alt="Warning" />}
-    </div>
+    <>
+      {loading && <div className="form-state-loading">
+        {status === 'loading-gray' &&
+          <img className="loading" src="/assets/icons/loading-gray.svg" alt="Loading..." />}
+        {status === 'loading' &&
+          <img className="loading" src="/assets/icons/loading.svg" alt="Loading..." />}
+        {status === 'success' && <img src="/assets/icons/check.svg" alt="Success" />}
+        {status === 'warning' && <img src="/assets/icons/warning.svg" alt="Warning" />}
+      </div>}
+    </>
   );
 };
 
-function SwapState({ formState, loading, executeState, transactionCancel }: {
+function SwapState({ formState, loading, executeState, setLoading, transactionCancel }: {
   formState: FormState,
   loading: boolean,
+  setLoading: (size: boolean) => void,
   executeState: (state: FormState) => Promise<void>
   transactionCancel: (state: ScheduledTransactionStatus) => Promise<void>
 }) {
@@ -54,31 +57,49 @@ function SwapState({ formState, loading, executeState, transactionCancel }: {
 
   const handleStart = async (): Promise<void> => {
     if (!loading) {
+      formState.status = 'NotStarted';
+      formState.isCompleted = false;
+      formState.data = undefined;
       await executeState(formState);
+      setLoading(false);
     }
   };
 
   const canRestart = useMemo(() => {
-    return !loading && ['Empty', 'Failed', 'Skipped', 'NotStarted'].includes(formState.status);
+    return !loading && ['Empty', 'Failed', 'Skipped', 'Empty'].includes(formState.status);
   }, [loading, formState]);
+
+  const canStart = useMemo(() => {
+    return !loading && ['NoStarted'].includes(formState.status);
+  }, [loading, formState]);
+
+  const showLink = (trx: ScheduledTransactionStatus): boolean => {
+    return ['Success', 'Empty', 'Failed', 'Skipped'].includes(trx.status);
+  }
 
   return (
     <div className="form-state">
       <div className="form-state-title">
         <div className="form-state-title-item title">
-          <div className='form-state-number'>{formState.id + 1}</div>
+          <div className="form-state-number">{formState.id + 1}</div>
           <div className="title">{formState.title}</div>
         </div>
         <div className="form-state-title-item loading">
-          {canRestart && <button className={'button-restart'} onClick={handleStart}>Restart</button>}
+          {canRestart &&
+            <button className={'button-restart'} onClick={handleStart}>Restart</button>}
+          {canStart &&
+            <button className={'button-restart'} onClick={handleStart}>Start</button>}
           <Status formState={formState} loading={loading} />
         </div>
       </div>
-      <div className="form-state-body">
-        {!!formState.data && formState.data?.transactions?.length > 0 && <>
+      {!!formState.data && formState.data?.transactions?.length > 0 && <>
+        <div className="form-state-body">
           {formState.data.transactions.map((trx, key) => {
             return <div className="form-state-transaction" key={key}>
-              <div className="transaction-item">{trx.transactionHash}</div>
+              <div className="transaction-item">
+                {showLink(trx) ? <a href={`https://devnet.neonscan.org/tx/${trx.transactionHash}`} target='_blank'>{trx.transactionHash}</a>
+                : <span>{trx.transactionHash}</span>}
+              </div>
               <div className="transaction-item">
                 {show && trx.status === 'NotStarted' &&
                   <button onClick={() => handleCancel(trx)}>x</button>}
@@ -86,8 +107,8 @@ function SwapState({ formState, loading, executeState, transactionCancel }: {
               </div>
             </div>;
           })}
-        </>}
-      </div>
+        </div>
+      </>}
     </div>
   );
 }

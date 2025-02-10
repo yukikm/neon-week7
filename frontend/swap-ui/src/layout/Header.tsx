@@ -12,13 +12,14 @@ const Header = () => {
   const [balance, setBalance] = useState(0);
 
   useEffect(() => {
-
     const getBalance = async () => {
       if (publicKey && connection) {
         const b = await connection.getBalance(publicKey);
         if (b) {
           setBalance(b);
         }
+      } else {
+        setBalance(0);
       }
     };
     getBalance();

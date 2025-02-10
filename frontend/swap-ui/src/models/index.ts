@@ -70,6 +70,7 @@ export interface SwapTokensResponse {
 export interface FormState {
   id: number;
   title: string;
+  isCompleted: boolean;
   status: TransactionStatus;
   method: (nonce: number, transactionGas: TransactionGas) => Promise<SwapTokensResponse>;
   gas?: TransactionGas;

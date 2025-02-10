@@ -1,24 +1,22 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
-import { delay, logJson, NeonAddress } from '@neonevm/solana-sign';
+import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TokenField } from './components/TokenField/TokenField.tsx';
 import { swap, tokensList } from '../data/tokens.ts';
 import { CTokenBalance, FormState, SwapTokensResponse, TransactionGas } from '../models';
 import { approveTokensMultiple, swapTokensMultiple } from '../api/swap';
 import { useProxyConnection } from '../wallet/Connection';
-import './SwapForm.css';
 import SwapState from './components/SwapState/SwapState.tsx';
-import { ScheduledTransactionStatus } from '@neonevm/solana-sign/dist/types/models/api';
-import { getTokenExchangeRate } from '../utils/token.ts';
+import './SwapForm.css';
 
 interface FormData {
   from: { token: string, amount: string },
   to: { token: string, amount: string },
 }
 
-const DURATION = 12e4;
+const DURATION = 3e5;
 const DELAY = 1e3;
 
 export const SwapForm: React.FC = () => {
@@ -33,7 +31,7 @@ export const SwapForm: React.FC = () => {
     sendTransaction,
     provider
   } = useProxyConnection();
-  const [one, two] = tokensList;
+  const [one, , , two] = tokensList;
   const [formData, setFormData] = useState<FormData>({
     from: { token: one.symbol!, amount: '0.01' },
     to: { token: two.symbol!, amount: '0.001' }
@@ -41,6 +39,37 @@ export const SwapForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [transactionStates, setTransactionStates] = useState<FormState[]>([]);
   const transactionsRef = useRef<FormState[]>([]);
+  const [error, setError] = useState<string>(``);
+
+  const formValidation = useMemo((): boolean => {
+    const { from, to } = formData;
+    return !from.amount || !to.amount;
+  }, [formData]);
+
+  const buttonText = useMemo((): string => {
+    const { from, to } = formData;
+    if (!connected) {
+      return `Connect wallet`;
+    }
+    if (from.amount?.length === 0 || to.amount?.length === 0) {
+      return `Enter an amount`;
+    }
+    if (loading) {
+      return `Whait...`;
+    }
+    return `Swap`;
+  }, [formData, connected, loading]);
+
+  const pancakePair = useMemo<NeonAddress>(() => {
+    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
+    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
+    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
+    return swap.pairs[pair];
+  }, [formData.from.token, formData.to.token]);
+
+  const formDisabled = useMemo<boolean>(() => {
+    return !publicKey || !pancakePair || formValidation || loading;
+  }, [formValidation, loading, pancakePair, publicKey]);
 
   const changeTransactionStates = (state: FormState): void => {
     setTransactionStates(currentState => currentState.map(st => {
@@ -64,8 +93,6 @@ export const SwapForm: React.FC = () => {
     const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
     const amountFrom = Number(formData.from.amount);
     const amountTo = Number(formData.to.amount);
-    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
-    const pancakePair = swap.pairs[pair];
     const pancakeRouter: NeonAddress = swap.router;
 
     return approveTokensMultiple({
@@ -121,17 +148,16 @@ export const SwapForm: React.FC = () => {
   const executeTransactionState = async (state: FormState): Promise<void> => {
     try {
       setLoading(true);
+      setError('');
       const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
-      const { maxPriorityFeePerGas, maxFeePerGas } = await proxyApi.getMaxFeePerGas();
+      const { maxPriorityFeePerGas: a, maxFeePerGas: b } = await proxyApi.getMaxFeePerGas();
       const { scheduledTransaction, transactions } = await state.method(nonce, {
-        maxPriorityFeePerGas,
-        maxFeePerGas,
-        gasLimit: [12e4, 12e4, 12e4]
+        maxPriorityFeePerGas: a,
+        maxFeePerGas: b,
+        gasLimit: [1500000, 1500000, 1500000]
       });
       changeTransactionStates(state);
-
       await sendTransaction(scheduledTransaction);
-      console.log(maxFeePerGas, maxPriorityFeePerGas);
 
       const results = [];
       for (const transaction of transactions) {
@@ -146,6 +172,7 @@ export const SwapForm: React.FC = () => {
         if (result) {
           state.data = result;
           state.status = result.activeStatus;
+          state.isCompleted = result.transactions.every(i => i.status === 'Success');
           changeTransactionStates(state);
           if (['Success', 'Empty', 'Failed', 'Skipped'].includes(result.activeStatus)) {
             break;
@@ -155,16 +182,24 @@ export const SwapForm: React.FC = () => {
         }
         await delay(DELAY);
       }
-      setLoading(false);
     } catch (e) {
       console.log(e.message);
+      setError(e.message);
       setLoading(false);
     }
   };
 
   const executeTransactionsStates = async (transactionStates: FormState[]): Promise<void> => {
     for (const state of transactionStates) {
+      const [one, two] = transactionStates;
+      if (state.id === two.id) {
+        if (!one.isCompleted) {
+          return;
+        }
+      }
+      console.log(`Run transaction ${state.title}`);
       await executeTransactionState(state);
+      await delay(1e3);
     }
   };
 
@@ -174,6 +209,7 @@ export const SwapForm: React.FC = () => {
         id: 0,
         title: `Approve`,
         status: `NoStarted`,
+        isCompleted: false,
         method: approveSwap,
         data: undefined
       };
@@ -181,12 +217,14 @@ export const SwapForm: React.FC = () => {
         id: 1,
         title: `Swap tokens`,
         status: `NoStarted`,
+        isCompleted: false,
         method: tokensSwap,
         data: undefined
       };
       transactionsRef.current = [approveState, swapState];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
+      setLoading(false);
     } catch (e: unknown) {
       console.log(e.message);
       if (transactionsRef.current.some(i => !i.data)) {
@@ -197,45 +235,19 @@ export const SwapForm: React.FC = () => {
     }
   };
 
-  const formValidation = useMemo((): boolean => {
-    const { from, to } = formData;
-    return !from.amount || !to.amount;
-  }, [formData]);
-
-  const buttonText = useMemo((): string => {
-    const { from, to } = formData;
-    if (!connected) {
-      return `Connect wallet`;
-    }
-    if (from.amount?.length === 0 || to.amount?.length === 0) {
-      return `Enter an amount`;
-    }
-    if (loading) {
-      return `Whait...`;
-    }
-    return `Swap`;
-  }, [formData, connected, loading]);
-
   const handleSwitch = () => {
     const { from, to } = formData;
     setFormData({ from: to, to: from });
+    setError('');
     resetTransactionStates();
     console.log(JSON.stringify(formData));
   };
 
-  const handleTokenData = async (type: 'from' | 'to', value: {
+  const handleTokenData = (type: 'from' | 'to', value: {
     token: CTokenBalance;
     amount: string;
   }): void => {
     setFormData({ ...formData, [type]: value });
-    // if (type === 'from') {
-    //   const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
-    //   const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
-    //   const data = await getTokenExchangeRate(provider, swap.router, tokenFrom, tokenTo, formData.from?.amount);
-    //   const to = formData.to;
-    //   to.amount = (Number(data[1]) / tokenTo.decimals).toString();
-    //   setFormData({ ...formData, to });
-    // }
   };
 
   useEffect(() => {
@@ -255,11 +267,17 @@ export const SwapForm: React.FC = () => {
         }
         tokens.push(cTokenBalance);
       }
-      setTokenBalanceList(tokens);
+      setTokenBalanceList(() => tokens);
     };
 
     getBalance().catch(console.log);
   }, [publicKey, loading]);
+
+  useEffect(() => {
+    if (!connected) {
+      resetTransactionStates();
+    }
+  }, [connected]);
 
   return (
     <div>
@@ -295,14 +313,15 @@ export const SwapForm: React.FC = () => {
           {transactionStates.map((state, key) => {
             return <SwapState key={key} formState={state} loading={loading}
                               executeState={executeTransactionState}
+                              setLoading={setLoading}
                               transactionCancel={cancelTransaction}></SwapState>;
           })}
         </div>
       </div>}
+      {error.length > 0 && <div className="form-error">{error}</div>}
       <div className="form-group">
         <div className="form-field">
-          <button className="form-button" onClick={handleSubmit}
-                  disabled={!publicKey || formValidation || loading}>
+          <button className="form-button" onClick={handleSubmit} disabled={formDisabled}>
             {buttonText}
           </button>
         </div>
