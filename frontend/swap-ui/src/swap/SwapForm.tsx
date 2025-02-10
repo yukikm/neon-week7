@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TokenField } from './components/TokenField/TokenField.tsx';
 import { swap, tokensList } from '../data/tokens.ts';
 import { CTokenBalance, FormState, SwapTokensResponse, TransactionGas } from '../models';
-import { approveTokensMultiple, swapTokensMultiple } from '../api/swap';
+import { approveTokensMultiple, withdrawTokensMultiple } from '../api/swap';
 import { useProxyConnection } from '../wallet/Connection';
 import SwapState from './components/SwapState/SwapState.tsx';
 import './SwapForm.css';
@@ -89,7 +89,7 @@ export const SwapForm: React.FC = () => {
     setTransactionStates(_ => []);
   };
 
-  const approveSwap = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
+  const approveAndSwap = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
     const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
     const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
     const amountFrom = Number(formData.from.amount);
@@ -114,7 +114,7 @@ export const SwapForm: React.FC = () => {
     });
   };
 
-  const tokensSwap = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
+  const withdrawTokens = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
     const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
     const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
     const amountFrom = Number(formData.from.amount);
@@ -123,7 +123,7 @@ export const SwapForm: React.FC = () => {
     const pancakePair = swap.pairs[pair];
     const pancakeRouter: NeonAddress = swap.router;
 
-    return swapTokensMultiple({
+    return withdrawTokensMultiple({
       transactionGas,
       nonce,
       proxyApi,
@@ -212,20 +212,20 @@ export const SwapForm: React.FC = () => {
     try {
       const approveState: FormState = {
         id: 0,
-        title: `Approve`,
+        title: `Approve ans Swap tokens`,
         status: `NotStarted`,
         signature: ``,
         isCompleted: false,
-        method: approveSwap,
+        method: approveAndSwap,
         data: undefined
       };
       const swapState: FormState = {
         id: 1,
-        title: `Swap tokens`,
+        title: `Withdraw tokens to Solana wallet`,
         status: `NotStarted`,
         signature: ``,
         isCompleted: false,
-        method: tokensSwap,
+        method: withdrawTokens,
         data: undefined
       };
       transactionsRef.current = [approveState, swapState];
@@ -251,10 +251,16 @@ export const SwapForm: React.FC = () => {
   };
 
   const handleTokenData = (type: 'from' | 'to', value: {
-    token: CTokenBalance;
+    token: string;
     amount: string;
   }): void => {
-    setFormData({ ...formData, [type]: value });
+    setFormData(prevData => {
+      if (prevData[type].token !== value.token) {
+        setError('');
+        resetTransactionStates();
+      }
+      return ({ ...prevData, [type]: value });
+    });
   };
 
   useEffect(() => {

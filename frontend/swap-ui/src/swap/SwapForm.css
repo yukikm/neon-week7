@@ -21,7 +21,7 @@
 }
 
 .wallet-amount {
-  @apply flex flex-row gap-[4px] text-[16px] font-bold mb-[2px];
+  @apply flex flex-row gap-[4px] text-[16px] font-bold mb-[2px] items-center;
 }
 
 .form-button {

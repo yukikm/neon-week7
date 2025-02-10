@@ -1,12 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import AmountInput from 'react-currency-input-field';
-import { tokenIcons } from '../../../data/tokens.ts';
-import TokensModal from '../TokensModal/TokensModal.tsx';
 import { CTokenBalance } from '../../../models';
+import { tokenIcons } from '../../../data/tokens';
+import TokensModal from '../TokensModal/TokensModal';
 import './TokenField.css';
-import { useProxyConnection } from '../../../wallet/Connection.tsx';
-import { handleTokensBack } from '../../../api/swap.ts';
-import { useWallet } from '@solana/wallet-adapter-react';
 
 type Props = {
   data: {
@@ -22,15 +19,6 @@ type Props = {
 
 export const TokenField: React.FC = (props: Props) => {
   const { data, tokensList, type, label, setTokenData, excludedToken } = props;
-  const {
-    provider,
-    proxyApi,
-    neonEvmProgram,
-    solanaUser,
-    chainId,
-    sendTransaction
-  } = useProxyConnection();
-  const { publicKey } = useWallet();
   const [openModal, setOpenModal] = useState(false);
 
   const tokenIcon = useMemo(() => {
@@ -80,24 +68,6 @@ export const TokenField: React.FC = (props: Props) => {
   };
 
   const handleWallet = async (): Promise<bigint> => {
-    if (publicKey) {
-      const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
-
-      const transaction = await handleTokensBack({
-        provider,
-        proxyApi,
-        neonEvmProgram,
-        solanaUser,
-        token: token!,
-        nonce,
-        chainId
-      });
-      if (transaction) {
-        await sendTransaction(transaction);
-        const transactionExecution = await proxyApi.waitTransactionTreeExecution(solanaUser.neonWallet, nonce, 6e4);
-        console.log(transactionExecution);
-      }
-    }
   };
 
   return (
@@ -105,15 +75,15 @@ export const TokenField: React.FC = (props: Props) => {
       <div className="form-label">
         <label>{label}</label>
         <div className="wallet-amount">
-          <button className="button-back" onClick={handleWallet}>
+          <div className="button-back" onClick={handleWallet}>
             <img src="/assets/icons/wallet.svg" alt="" />
-          </button>
+          </div>
           <span className="amount">{tokenBalance}</span>
         </div>
       </div>
       <div className="token-field">
         <div className="token-field-item icon">
-          <button type="submit" className="token-button" onClick={handleOpenModal}>
+          <button type="button" className="token-button" onClick={handleOpenModal}>
             <div className="token-icon">
               <img src={tokenIcon} width="36px" height="36px" alt="" />
             </div>
