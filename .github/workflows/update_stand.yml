@@ -40,3 +40,4 @@
 #           directory: "./frontend/swap-ui/dist"
 #           # Optional: Enable this if you want to have GitHub Deployments triggered
 #           gitHubToken: ${{ secrets.GHTOKEN }}
+ 
