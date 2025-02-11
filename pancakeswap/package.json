@@ -4,15 +4,21 @@
   "main": "index.js",
   "scripts": {
     "setup-pancakeswap-curvestand": "npx hardhat run ./scripts/pancakeswap-demo-setup.js --network curvestand",
+    "mint": "npx hardhat run ./scripts/mint-tokens.js --network curvestand",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "maxpolizzo@gmail.com",
   "license": "MIT",
   "description": "A set of hardhat scripts to deploy Pancakeswap exchange contracts, ERC20ForSPL tokens and liquidity pools",
   "dependencies": {
+    "@neonevm/token-transfer-core": "^4.4.2",
+    "@neonevm/token-transfer-ethers": "^4.4.2",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@openzeppelin/contracts": "^4.2.0",
+    "@solana/spl-token": "0.4.9",
+    "@solana/web3.js": "^1.98.0",
     "@uniswap/lib": "^4.0.1-alpha",
+    "bs58": "^6.0.0",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
     "hardhat": "^2.22.18"

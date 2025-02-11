@@ -3,12 +3,12 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { TokenField } from './components/TokenField/TokenField.tsx';
-import { swap, tokensList } from '../data/tokens.ts';
+import { TokenField } from './components/TokenField/TokenField';
+import SwapState from './components/SwapState/SwapState';
+import { useProxyConnection } from '../wallet/Connection';
 import { CTokenBalance, FormState, SwapTokensResponse, TransactionGas } from '../models';
 import { approveTokensMultiple, withdrawTokensMultiple } from '../api/swap';
-import { useProxyConnection } from '../wallet/Connection';
-import SwapState from './components/SwapState/SwapState.tsx';
+import { swap, tokensList } from '../data/tokens';
 import './SwapForm.css';
 
 interface FormData {
@@ -31,7 +31,7 @@ export const SwapForm: React.FC = () => {
     sendTransaction,
     provider
   } = useProxyConnection();
-  const [one, , , two] = tokensList;
+  const [one, two] = tokensList;
   const [formData, setFormData] = useState<FormData>({
     from: { token: one.symbol!, amount: '0.01' },
     to: { token: two.symbol!, amount: '0.001' }

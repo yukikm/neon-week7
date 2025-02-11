@@ -1,4 +1,5 @@
 const { ethers, network, run } = require('hardhat');
+const { default: bs58 } = require('bs58');
 const config = require('../config');
 const { airdropNEON } = require('./utils');
 
@@ -71,17 +72,27 @@ async function deployERC20ForSPLMintable(
     token = ERC20ForSPLMintableContractFactory.attach(config[tokenKey][network.name]);
   }
 
-  let tokenAddress = token.target;
-  let tokenName = await token.name();
-  let tokenSymbol = await token.symbol();
-  let tokenDecimals = (await token.decimals()).toString();
+  const tokenAddress = token.target;
+  const tokenName = await token.name();
+  const tokenSymbol = await token.symbol();
+  const tokenDecimals = await token.decimals();
+  const tokenMint = await token.tokenMint();
+  const address_spl = bs58.encode(ethers.getBytes(tokenMint));
+
   console.log('\nToken address: ' + tokenAddress);
+  console.log('Token spl address: ' + address_spl);
   console.log('Token name: ' + tokenName);
   console.log('Token symbol: ' + tokenSymbol);
   console.log('Token decimals: ' + tokenDecimals);
   console.log('Token mint authority: ' + mintAuthority);
 
-  return tokenAddress;
+  return {
+    address: tokenAddress,
+    address_spl: address_spl,
+    name: tokenName,
+    symbol: tokenSymbol,
+    decimals: Number(tokenDecimals)
+  };
 }
 
 /*
