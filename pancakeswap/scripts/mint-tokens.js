@@ -1,10 +1,10 @@
-const { ethers, network, run } = require('hardhat');
+const { ethers, network } = require('hardhat');
 const {
   getAssociatedTokenAddressSync,
   createTransferInstruction,
   createAssociatedTokenAccountInstruction
 } = require('@solana/spl-token');
-const { mintNeonTransactionData } = require('@neonevm/token-transfer-ethers');
+const { erc20ForSPLContract } = require('@neonevm/token-transfer-ethers');
 const { createMintNeonTransaction } = require('@neonevm/token-transfer-core');
 const {
   Connection,
@@ -22,14 +22,12 @@ const provider = new JsonRpcProvider(process.env.NEON_EVM_NODE);
 
 async function main() {
   console.log('\nNetwork name: ' + network.name);
-
-
   const solanaUrl = process.env.SOLANA_RPC_NODE;
   const connection = new Connection(solanaUrl);
   const solanaWallet = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_WALLET));
 
   await connection.requestAirdrop(solanaWallet.publicKey, 1e9);
-  // await asyncTimeout(5e3);
+  await asyncTimeout(5e3);
   console.log(await connection.getBalance(solanaWallet.publicKey));
 
   const deployer = (await ethers.getSigners())[0];
@@ -49,56 +47,62 @@ async function main() {
   const wNeonFactory = await ethers.getContractFactory('WNEON');
   // const tokensKeys = [tokenAAddress, tokenBAddress];
   for (const token of addresses.tokens) {
-    const amountToMint = 10000;
+    const amount = 10000;
+    const amountToMint = ethers.parseUnits(amount.toString(), token.decimals);
     const tokenContract = erc20Factory.attach(token.address);
-    // await tokenContract.mint(deployer.address, amountToMint);
+    await tokenContract.mint(deployer.address, amountToMint);
     await asyncTimeout(2e3);
     // await tokenA.deposit({ value: amountToMint });
 
     console.log(`tokenContract.balanceOf`, await tokenContract.balanceOf(deployer.address));
-    await transferTokenToSolana(connection, solanaWallet, deployer, token, amountToMint);
-    await asyncTimeout(2e3);
-
-    const tokenAmount = 10 ** token.decimals;
-    const memberWallet = new PublicKey(memberWallets[0]);
-    const tokenMint = new PublicKey(token.address_spl);
-    const ataFrom = getAssociatedTokenAddressSync(tokenMint, solanaWallet.publicKey);
-    const ataTo = getAssociatedTokenAddressSync(tokenMint, memberWallet);
-    console.log(`ataFrom`, ataFrom.toBase58(), await connection.getTokenAccountBalance(ataFrom));
-    console.log(`ataTo`, ataTo.toBase58(), await connection.getTokenAccountBalance(ataTo));
-
-    let account = await connection.getAccountInfo(ataTo);
-    if (!account) {
-      const transaction = new Transaction();
-      transaction.add(createAssociatedTokenAccountInstruction(solanaWallet.publicKey, ataTo, memberWallet, tokenMint));
-      const signature = await sendSolanaTransaction(connection, transaction, [solanaWallet]);
+    await transferTokenToBankAccount(connection, solanaWallet, deployer, token, amountToMint);
+    for (const memberWallet of memberWallets) {
+      await transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, 100);
+      await asyncTimeout(2e3);
     }
-    const transaction = new Transaction();
-    transaction.add(createTransferInstruction(ataFrom, ataTo, solanaWallet.publicKey, tokenAmount));
-    const signature = await sendSolanaTransaction(connection, transaction, [solanaWallet]);
-    console.log(signature);
   }
 }
 
-async function transferTokenToSolana(connection, solanaWallet, deployer, token, amount) {
+async function transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, amount) {
+  const tokenAmount = ethers.parseUnits(amount.toString(), token.decimals);
+  const tokenMint = new PublicKey(token.address_spl);
+  const ataFrom = getAssociatedTokenAddressSync(tokenMint, solanaWallet.publicKey);
+  console.log(`Token Account: ${ataFrom.toBase58()}`);
+  console.log(`Balance`, await connection.getTokenAccountBalance(ataFrom));
+
+  const ataTo = getAssociatedTokenAddressSync(tokenMint, memberWallet);
+  const account = await connection.getAccountInfo(ataTo);
+  if (!account) {
+    const transaction = new Transaction();
+    transaction.add(createAssociatedTokenAccountInstruction(solanaWallet.publicKey, ataTo, memberWallet, tokenMint));
+    await sendSolanaTransaction(connection, transaction, [solanaWallet]);
+    await asyncTimeout(10e3);
+  }
+  const transaction = new Transaction();
+  transaction.add(createTransferInstruction(ataFrom, ataTo, solanaWallet.publicKey, tokenAmount));
+  const signature = await sendSolanaTransaction(connection, transaction, [solanaWallet]);
+  console.log(signature);
+  await asyncTimeout(2e3);
+  console.log(`Token Account: ${ataTo.toBase58()}`);
+  console.log(`Balance`, await connection.getTokenAccountBalance(ataTo));
+}
+
+async function transferTokenToBankAccount(connection, solanaWallet, deployer, token, amount) {
   await createAssociatedTokenAccount(connection, solanaWallet, token);
   const mintAddress = new PublicKey(token.address_spl);
   const tokenAddress = getAssociatedTokenAddressSync(mintAddress, solanaWallet.publicKey);
-  const data = mintNeonTransactionData(tokenAddress, token, amount);
-  const transaction = createMintNeonTransaction(deployer.address, token, data);
+  const transferSolanaData = erc20ForSPLContract().encodeFunctionData('transferSolana', [tokenAddress.toBuffer(), amount]);
+  const transaction = createMintNeonTransaction(deployer.address, token, transferSolanaData);
   const feeData = await provider.getFeeData();
-  const gasEstimate = await provider.estimateGas(transaction);
-  console.log(gasEstimate);
   transaction.gasPrice = feeData.gasPrice;
   transaction.gasLimit = 1e7;
   transaction.nonce = await deployer.getNonce();
   const result = await deployer.sendTransaction(transaction);
   console.log(JSON.stringify(result, null, 2));
-  await result.wait();
-  console.log(result);
+  await result.wait(1e3);
+  await asyncTimeout(3e3);
   return result;
 }
-
 
 main()
   .then(() => process.exit(0))
