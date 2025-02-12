@@ -64,7 +64,10 @@ export const TokenField: React.FC = (props: Props) => {
   };
 
   const handleInput = (amount: string): void => {
-    setTokenData(type, { amount, token: data.token });
+    const b = Number(amount);
+    const a = b < 0 ? '0' : b > 10 ? '10' : amount;
+    const c = a ? a : '';
+    setTokenData(type, { amount: c, token: data.token });
   };
 
   const handleWallet = async (): Promise<bigint> => {
@@ -91,8 +94,9 @@ export const TokenField: React.FC = (props: Props) => {
           </button>
         </div>
         <div className="token-field-item amount w-full">
-          <AmountInput decimalsLimit={9} max={1} onValueChange={handleInput} value={data.amount}
-                       placeholder="0.00" disabled />
+          <AmountInput decimalsLimit={token?.decimals} maxLength={10} onValueChange={handleInput}
+                       value={data.amount}
+                       placeholder="0.00" />
         </div>
       </div>
       <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal}

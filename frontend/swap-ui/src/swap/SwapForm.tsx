@@ -29,12 +29,13 @@ export const SwapForm: React.FC = () => {
     chainId,
     neonEvmProgram,
     sendTransaction,
+    getWalletBalance,
     provider
   } = useProxyConnection();
   const [one, two] = tokensList;
   const [formData, setFormData] = useState<FormData>({
-    from: { token: one.symbol!, amount: '0.01' },
-    to: { token: two.symbol!, amount: '0.001' }
+    from: { token: one.symbol!, amount: '1' },
+    to: { token: two.symbol!, amount: '1' }
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [transactionStates, setTransactionStates] = useState<FormState[]>([]);
@@ -44,7 +45,10 @@ export const SwapForm: React.FC = () => {
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
     const tokenFrom = tokenBalanceList.find(t => t.token.symbol === formData.from.token)!;
-    return !from.amount || !to.amount || !tokenFrom?.balance?.amount;
+    const a = Number(from.amount);
+    const b = Number(from.amount);
+    const c = [NaN, 0];
+    return !from.amount || !to.amount || c.includes(a) || c.includes(b) || !tokenFrom?.balance?.amount;
   }, [formData, tokenBalanceList]);
 
   const buttonText = useMemo((): string => {
@@ -284,6 +288,7 @@ export const SwapForm: React.FC = () => {
     };
 
     getBalance().catch(console.log);
+    getWalletBalance().catch(console.log);
   }, [publicKey, loading]);
 
   useEffect(() => {

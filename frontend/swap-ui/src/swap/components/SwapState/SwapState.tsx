@@ -2,6 +2,7 @@ import React, { FC, useMemo } from 'react';
 import { FormState } from '../../../models';
 import './SwapState.css';
 import { ScheduledTransactionStatus } from '@neonevm/solana-sign/dist/types/models/api';
+import { SOLANA_URL } from '../../../environments';
 
 
 const Status: FC = ({ formState, loading }: { formState: FormState, loading: boolean }) => {
@@ -85,7 +86,8 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
           <div className="form-state-number">{formState.id + 1}</div>
           <div className="title">{formState.title}</div>
           {formState.signature?.length > 0 &&
-            <a href={`https://solscan.io/tx/${formState.signature}?cluster=devnet`} target="_blank">
+            <a href={`https://explorer.solana.com/tx/${formState.signature}?cluster=custom&customUrl=${SOLANA_URL}`} target="_blank">
+              {/*<a href={`https://solscan.io/tx/${formState.signature}?cluster=devnet`} target="_blank">*/}
               <img src="/assets/solscan.webp" width={18} height={18} alt="" />
             </a>}
         </div>
