@@ -1,12 +1,6 @@
 const { existsSync, mkdirSync, writeFileSync } = require('fs');
 const { join } = require('path');
 const { solanaTransactionLog } = require('@neonevm/token-transfer-core');
-const { PublicKey, Transaction } = require('@solana/web3.js');
-const {
-  getAssociatedTokenAddressSync,
-  createAssociatedTokenAccountInstruction
-} = require('@solana/spl-token');
-
 const { ethers } = require('hardhat');
 
 async function asyncTimeout(timeout) {
@@ -37,24 +31,6 @@ async function sendSolanaTransaction(connection, transaction, signers, confirm =
   return signature;
 }
 
-async function createAssociatedTokenAccount(connection, signer, token) {
-  const solanaWallet = signer.publicKey;
-  const tokenMint = new PublicKey(token.address_spl);
-  const tokenAccount = getAssociatedTokenAddressSync(tokenMint, solanaWallet);
-  let account = await connection.getAccountInfo(tokenAccount);
-  console.log(account);
-  if (!account) {
-    const transaction = new Transaction();
-    transaction.add(createAssociatedTokenAccountInstruction(solanaWallet, tokenAccount, solanaWallet, tokenMint));
-    transaction.recentBlockhash = (await connection.getLatestBlockhash('finalized')).blockhash;
-    const signature = await sendSolanaTransaction(connection, transaction, [signer], false, { skipPreflight: false });
-    console.log(signature);
-    await asyncTimeout(2e3);
-    account = await connection.getAccountInfo(tokenAccount);
-  }
-  return account;
-}
-
 function writeToFile(fileName, data, distPath = 'artifacts') {
   try {
     const root = process.cwd();
@@ -71,6 +47,5 @@ module.exports = {
   asyncTimeout,
   airdropNEON,
   sendSolanaTransaction,
-  createAssociatedTokenAccount,
   writeToFile
 };
