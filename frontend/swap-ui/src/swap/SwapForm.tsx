@@ -298,7 +298,7 @@ export const SwapForm: React.FC = () => {
   }, [connected]);
 
   return (
-    <div>
+    <div className='max-w-[624px]'>
       <div className="form-group">
         <div className="form-label !mb-[10px]">
           <label>Contract version</label>
