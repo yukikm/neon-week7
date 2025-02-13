@@ -22,6 +22,7 @@ require('dotenv').config();
 const provider = new JsonRpcProvider(process.env.NEON_EVM_NODE);
 
 const memberWallets = [
+  `Cvy4tJfTJWqEN7QkXaKKmB8sZ2eU7FnWwTVbzWQLLtz4`
   `597t2sa4xA5nmpksr4By176PDeCgwjiTfsFCymxq1pyY`,
   `9MixdkmJUX6tDqPi51u4UuK1QgYVSXZZXnfdv6KhWQDL`,
   `BeLYBoBfsiRfcDu8aRTcrscR4r8byXFjY4keKjp2JDUW`,

@@ -60,7 +60,7 @@ export const SwapForm: React.FC = () => {
       return `Enter an amount`;
     }
     if (loading) {
-      return `Whait...`;
+      return `Wait...`;
     }
     return `Swap`;
   }, [formData, connected, loading]);
@@ -216,7 +216,7 @@ export const SwapForm: React.FC = () => {
     try {
       const approveState: FormState = {
         id: 0,
-        title: `Approve ans Swap tokens`,
+        title: `Approve and Swap tokens`,
         status: `NotStarted`,
         signature: ``,
         isCompleted: false,
