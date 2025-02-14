@@ -3,12 +3,12 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { TokenField } from './components/TokenField/TokenField.tsx';
-import { swap, tokensList } from '../data/tokens.ts';
+import { TokenField } from './components/TokenField/TokenField';
+import SwapState from './components/SwapState/SwapState';
+import { useProxyConnection } from '../wallet/Connection';
 import { CTokenBalance, FormState, SwapTokensResponse, TransactionGas } from '../models';
 import { approveTokensMultiple, withdrawTokensMultiple } from '../api/swap';
-import { useProxyConnection } from '../wallet/Connection';
-import SwapState from './components/SwapState/SwapState.tsx';
+import { swap, tokensList } from '../data/tokens';
 import './SwapForm.css';
 
 interface FormData {
@@ -29,12 +29,13 @@ export const SwapForm: React.FC = () => {
     chainId,
     neonEvmProgram,
     sendTransaction,
+    getWalletBalance,
     provider
   } = useProxyConnection();
-  const [one, , , two] = tokensList;
+  const [one, two] = tokensList;
   const [formData, setFormData] = useState<FormData>({
-    from: { token: one.symbol!, amount: '0.01' },
-    to: { token: two.symbol!, amount: '0.001' }
+    from: { token: one.symbol!, amount: '1' },
+    to: { token: two.symbol!, amount: '1' }
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [transactionStates, setTransactionStates] = useState<FormState[]>([]);
@@ -44,7 +45,10 @@ export const SwapForm: React.FC = () => {
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
     const tokenFrom = tokenBalanceList.find(t => t.token.symbol === formData.from.token)!;
-    return !from.amount || !to.amount || !tokenFrom?.balance?.amount;
+    const a = Number(from.amount);
+    const b = Number(from.amount);
+    const c = [NaN, 0];
+    return !from.amount || !to.amount || c.includes(a) || c.includes(b) || !tokenFrom?.balance?.amount;
   }, [formData, tokenBalanceList]);
 
   const buttonText = useMemo((): string => {
@@ -56,7 +60,7 @@ export const SwapForm: React.FC = () => {
       return `Enter an amount`;
     }
     if (loading) {
-      return `Whait...`;
+      return `Wait...`;
     }
     return `Swap`;
   }, [formData, connected, loading]);
@@ -212,7 +216,7 @@ export const SwapForm: React.FC = () => {
     try {
       const approveState: FormState = {
         id: 0,
-        title: `Approve ans Swap tokens`,
+        title: `Approve and Swap tokens`,
         status: `NotStarted`,
         signature: ``,
         isCompleted: false,
@@ -284,6 +288,7 @@ export const SwapForm: React.FC = () => {
     };
 
     getBalance().catch(console.log);
+    getWalletBalance().catch(console.log);
   }, [publicKey, loading]);
 
   useEffect(() => {
@@ -293,7 +298,7 @@ export const SwapForm: React.FC = () => {
   }, [connected]);
 
   return (
-    <div>
+    <div className='max-w-[624px]'>
       <div className="form-group">
         <div className="form-label !mb-[10px]">
           <label>Contract version</label>

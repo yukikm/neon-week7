@@ -2,7 +2,7 @@ const { ethers, network, run } = require('hardhat');
 const { deployPancakeswapExchange } = require('./deploy-pancakeswap-exchange');
 const { deployERC20ForSPLMintable } = require('./deploy-tokens');
 const { createPairAndAddLiquidity } = require('./create-liquidity-pools');
-const { airdropNEON } = require('./utils');
+const { airdropNEON, writeToFile } = require('./utils');
 require('dotenv').config();
 
 async function main() {
@@ -29,12 +29,20 @@ async function main() {
   console.log('\nDeployer balance: ' + ethers.formatUnits(deployerBalance.toString(), 18) + ' NEON');
 
   // Deploy Pancakeswap exchnage contracts and WNEON
-  const pancakeExchangeAddresses = await deployPancakeswapExchange(deployer);
+  const {
+    pancakeFactoryAddress,
+    pancakeRouterAddress,
+    WNEONAddress,
+    NEONAddress,
+    token
+  } = await deployPancakeswapExchange(deployer);
 
   const mintAuthority = deployer.address; // Set deployer as mint authority
 
+  const wNeon = token;
+
   // Deploy TOKEN_A (ERC20ForSPLMintable)
-  const tokenAAddress = await deployERC20ForSPLMintable(
+  const tokenA = await deployERC20ForSPLMintable(
     'token_A',
     'Token A',
     'TOKEN_A',
@@ -43,7 +51,7 @@ async function main() {
   );
 
   // Deploy TOKEN_B (ERC20ForSPLMintable)
-  const tokenBAddress = await deployERC20ForSPLMintable(
+  const tokenB = await deployERC20ForSPLMintable(
     'token_B',
     'Token B',
     'TOKEN_B',
@@ -52,26 +60,60 @@ async function main() {
   );
 
   // Create WNEON-TOKEN_A pair and provide liquidity
-  await createPairAndAddLiquidity(
-    pancakeExchangeAddresses.pancakeFactoryAddress,
-    pancakeExchangeAddresses.pancakeRouterAddress,
+  const pairAddressA = await createPairAndAddLiquidity(
+    pancakeFactoryAddress,
+    pancakeRouterAddress,
     deployer,
-    pancakeExchangeAddresses.WNEONAddress,
-    tokenAAddress,
+    WNEONAddress,
+    tokenA.address,
     2000,
     7333
   );
 
-  // Create TOKEN_A-TOKEN_B pair and provide liquidity
-  await createPairAndAddLiquidity(
-    pancakeExchangeAddresses.pancakeFactoryAddress,
-    pancakeExchangeAddresses.pancakeRouterAddress,
+  // Create WNEON-TOKEN_B pair and provide liquidity
+  const pairAddressB = await createPairAndAddLiquidity(
+    pancakeFactoryAddress,
+    pancakeRouterAddress,
     deployer,
-    tokenAAddress,
-    tokenBAddress,
+    WNEONAddress,
+    tokenB.address,
+    5300,
+    14530
+  );
+
+  // Create TOKEN_A-TOKEN_B pair and provide liquidity
+  const pairAddressAB = await createPairAndAddLiquidity(
+    pancakeFactoryAddress,
+    pancakeRouterAddress,
+    deployer,
+    tokenA.address,
+    tokenB.address,
     6345,
     53809
   );
+
+  const result = {
+    tokens: [/*wNeon, */tokenA, tokenB],
+    swap: {
+      neonTokenTransfer: NEONAddress,
+      router: pancakeRouterAddress,
+      factory: pancakeFactoryAddress,
+      pairs: {
+        'wneon/token_a': pairAddressA,
+        'token_a/wneon': pairAddressA,
+        'wneon/token_b': pairAddressB,
+        'token_b/wneon': pairAddressB,
+        'token_a/token_b': pairAddressAB,
+        'token_b/token_a': pairAddressAB
+      }
+    }
+  };
+
+  const json = JSON.stringify(result, null, 2);
+  console.log(json);
+  writeToFile('addresses.json', json);
+  writeToFile('addresses.ts', `export const addresses = ${json}`);
+  writeToFile('addresses.js', `const addresses = ${json};\n\nmodule.exports = {addresses};`);
 
   console.log('\n');
 }

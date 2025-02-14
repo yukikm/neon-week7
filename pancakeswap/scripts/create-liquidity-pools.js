@@ -94,7 +94,7 @@ async function createPairAndAddLiquidity(
   const tokenBAmount = ethers.parseUnits(amountB.toString(), tokenBDecimals);
 
 
-  await createPair(
+  const pairAddress = await createPair(
     pancakeFactoryAddress,
     tokenAAddress,
     tokenBAddress,
@@ -163,6 +163,8 @@ async function createPairAndAddLiquidity(
     tokenBAmount,
     deployer.address
   );
+
+  return pairAddress;
 }
 
 async function createPair(
