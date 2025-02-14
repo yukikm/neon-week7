@@ -2,11 +2,24 @@ const { existsSync, mkdirSync, writeFileSync } = require('fs');
 const { join } = require('path');
 const { solanaTransactionLog } = require('@neonevm/token-transfer-core');
 const { ethers } = require('hardhat');
+const { LAMPORTS_PER_SOL } = require('@solana/web3.js');
 
 async function asyncTimeout(timeout) {
   return new Promise((resolve) => {
     setTimeout(() => resolve(), timeout);
   });
+}
+
+async function transferSolToMemberWallet(connection, memberWallet, amount, delay = 5e3) {
+  const fullAmount = amount * LAMPORTS_PER_SOL;
+  let balance = await connection.getBalance(memberWallet);
+  if (fullAmount > balance) {
+    console.log(`Airdrop: ${memberWallet.toBase58()} => ${amount} SOL`);
+    await connection.requestAirdrop(memberWallet, fullAmount);
+    await asyncTimeout(delay);
+    balance = await connection.getBalance(memberWallet);
+  }
+  console.log(`Wallet balance: ${memberWallet.toBase58()} - ${balance / LAMPORTS_PER_SOL} SOL`);
 }
 
 async function airdropNEON(address, amount) {
@@ -28,6 +41,7 @@ async function sendSolanaTransaction(connection, transaction, signers, confirm =
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
     await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature });
   }
+  console.log(`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=${process.env.SOLANA_RPC_NODE}`);
   return signature;
 }
 
@@ -47,5 +61,6 @@ module.exports = {
   asyncTimeout,
   airdropNEON,
   sendSolanaTransaction,
+  transferSolToMemberWallet,
   writeToFile
 };

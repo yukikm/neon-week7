@@ -30,6 +30,7 @@ async function main() {
 
 async function deployPancakeswapExchange(deployer) {
   let WNEONAddress;
+  let NEONAddress;
   let token;
   if (!config.WNEON[network.name]) {
     console.log('\nDeploying WNEON contract to ' + network.name + '...');
@@ -38,9 +39,14 @@ async function deployPancakeswapExchange(deployer) {
     await WNEON.waitForDeployment();
     console.log('WNEON contract deployed to: ' + WNEON.target);
     WNEONAddress = WNEON.target;
+    const neonTokenContract = await ethers.getContractFactory('NeonToken');
+    const neonToken = await neonTokenContract.deploy();
+    await neonToken.waitForDeployment();
+    NEONAddress = neonToken.target;
     token = {
       address: WNEON.target,
-      address_spl: ``,
+      // hardcoded NEON Mint
+      address_spl: `HPsV9Deocecw3GeZv1FkAPNCBRfuVyfw9MMwjwRe1xaU`,
       name: 'Wrapped NEON',
       symbol: 'wNEON',
       decimals: 18
@@ -78,7 +84,7 @@ async function deployPancakeswapExchange(deployer) {
     pancakeRouterAddress = config.pancakeRouter[network.name];
   }
 
-  return { pancakeFactoryAddress, pancakeRouterAddress, WNEONAddress, token };
+  return { pancakeFactoryAddress, pancakeRouterAddress, WNEONAddress, NEONAddress, token };
 }
 
 /*

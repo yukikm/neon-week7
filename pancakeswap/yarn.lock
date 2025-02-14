@@ -2150,9 +2150,9 @@ toidentifier@1.0.1:
   resolved "https://registry.yarnpkg.com/toidentifier/-/toidentifier-1.0.1.tgz#3be34321a88a820ed1bd80dfaa33e479fbb8dd35"
   integrity sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==
 
-"token-list@git+https://github.com/neonlabsorg/token-list.git#v5.8.5":
+"token-list@https://github.com/neonlabsorg/token-list.git#v5.8.5":
   version "0.0.0"
-  resolved "git+https://github.com/neonlabsorg/token-list.git#314ced2a16004577477159b49cc17f8e97848721"
+  resolved "https://github.com/neonlabsorg/token-list.git#314ced2a16004577477159b49cc17f8e97848721"
 
 tr46@~0.0.3:
   version "0.0.3"

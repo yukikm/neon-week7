@@ -1,6 +1,13 @@
 export const addresses = {
   "tokens": [
     {
+      "address": "0x3b797f94F7C49B58D7d6b67b8bDB33331d8569d3",
+      "address_spl": "HPsV9Deocecw3GeZv1FkAPNCBRfuVyfw9MMwjwRe1xaU",
+      "name": "Wrapped NEON",
+      "symbol": "wNEON",
+      "decimals": 18
+    },
+    {
       "address": "0xC3529Db933f3D28323CD825c666CBBAf5BDbF7f8",
       "address_spl": "2v1k5gUDkBHp2F3LnPrFJwqjnRb2CUCobVLgP1hK7m3s",
       "name": "Token A",
@@ -15,6 +22,9 @@ export const addresses = {
       "decimals": 12
     }
   ],
+  "transfer": {
+    "neonTokenTransfer": "0xA4C62831B47C0Bb3a0cF569B7a22A41749a48ED7"
+  },
   "swap": {
     "router": "0x1Be1a24E9BF504b35901c1b76fBf77766D6b7647",
     "factory": "0xb3bFD57D36D09209fFF3B5D4052c9c271FE11AAc",

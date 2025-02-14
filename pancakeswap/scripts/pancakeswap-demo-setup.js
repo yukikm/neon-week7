@@ -33,6 +33,7 @@ async function main() {
     pancakeFactoryAddress,
     pancakeRouterAddress,
     WNEONAddress,
+    NEONAddress,
     token
   } = await deployPancakeswapExchange(deployer);
 
@@ -94,6 +95,7 @@ async function main() {
   const result = {
     tokens: [/*wNeon, */tokenA, tokenB],
     swap: {
+      neonTokenTransfer: NEONAddress,
       router: pancakeRouterAddress,
       factory: pancakeFactoryAddress,
       pairs: {

@@ -1,32 +1,40 @@
 const { ethers, network } = require('hardhat');
 const {
-  getAssociatedTokenAddressSync,
-  createTransferInstruction,
-  createAssociatedTokenAccountInstruction
+  getAssociatedTokenAddressSync, createTransferInstruction, createAssociatedTokenAccountInstruction
 } = require('@solana/spl-token');
-const { erc20ForSPLContract } = require('@neonevm/token-transfer-ethers');
-const { createMintNeonTransaction } = require('@neonevm/token-transfer-core');
-const { treasuryPoolAddressSync, getProxyState, solanaAirdrop } = require(`@neonevm/solana-sign`);
 const {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction, LAMPORTS_PER_SOL
+  erc20ForSPLContract,
+  neonWrapperContract,
+  neonWrapper2Contract
+} = require('@neonevm/token-transfer-ethers');
+const {
+  createMintNeonTransaction,
+  wrappedNeonTransaction,
+  neonNeonTransaction
+} = require('@neonevm/token-transfer-core');
+const { treasuryPoolAddressSync, getProxyState } = require(`@neonevm/solana-sign`);
+const {
+  Connection, PublicKey, Keypair, Transaction, LAMPORTS_PER_SOL
 } = require('@solana/web3.js');
 const { default: bs58 } = require('bs58');
-const { asyncTimeout, sendSolanaTransaction } = require('./utils');
+const { asyncTimeout, sendSolanaTransaction, transferSolToMemberWallet } = require('./utils');
 const { addresses } = require('../artifacts/addresses');
 const { JsonRpcProvider } = require('ethers');
+const { Big } = require('big.js');
 require('dotenv').config();
 
 const provider = new JsonRpcProvider(process.env.NEON_EVM_NODE);
 
 const memberWallets = [
-  `Cvy4tJfTJWqEN7QkXaKKmB8sZ2eU7FnWwTVbzWQLLtz4`
+  /********************QA*********************/
+  `74ScNgGymddiT8Pq7cSSvozbLxdWoQVKmaN2Rzor9P5a`,
+  `Cvy4tJfTJWqEN7QkXaKKmB8sZ2eU7FnWwTVbzWQLLtz4`,
+  /*******************DEV*********************/
   `597t2sa4xA5nmpksr4By176PDeCgwjiTfsFCymxq1pyY`,
+  `2uiFt7tpJFkK8PUTmZt4waWouhTd2hPeiLJpJuv4qt9N`,
+  /*****************PRODUCT******************/
   `9MixdkmJUX6tDqPi51u4UuK1QgYVSXZZXnfdv6KhWQDL`,
   `BeLYBoBfsiRfcDu8aRTcrscR4r8byXFjY4keKjp2JDUW`,
-  `2uiFt7tpJFkK8PUTmZt4waWouhTd2hPeiLJpJuv4qt9N`,
   `ES5k14ELsh6wPrFGJ1c3GYBC8WS9vQkfHbvaCN5AM4nS`
 ];
 
@@ -42,11 +50,9 @@ async function main() {
   const deployer = (await ethers.getSigners())[0];
   console.log(`Deployer address: ${deployer.address}`);
 
-  const erc20Factory = await ethers.getContractFactory('ERC20ForSplMintable');
-  const wNeonFactory = await ethers.getContractFactory('WNEON');
   for (const token of addresses.tokens) {
     if (token.symbol === 'wNEON') {
-
+      await transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, 10000, addresses.transfer.neonTokenTransfer);
     } else {
       await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000);
     }
@@ -59,20 +65,8 @@ async function main() {
   }
 }
 
-async function transferSolToMemberWallet(connection, memberWallet, amount, delay = 5e3) {
-  const fullAmount = amount * LAMPORTS_PER_SOL;
-  let balance = await connection.getBalance(memberWallet);
-  if (fullAmount > balance) {
-    console.log(`Airdrop: ${memberWallet.toBase58()} => ${amount} SOL`);
-    await connection.requestAirdrop(memberWallet, fullAmount);
-    await asyncTimeout(delay);
-    balance = await connection.getBalance(memberWallet);
-  }
-  console.log(`Wallet balance: ${memberWallet.toBase58()} - ${balance / LAMPORTS_PER_SOL} SOL`);
-}
-
 async function transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, amount) {
-  const tokenAmount = ethers.parseUnits(amount.toString(), token.decimals);
+  const tokenAmount = ethers.parseUnits(amount.toString(), token.symbol === 'wNEON' ? 9 : token.decimals);
   const tokenMint = new PublicKey(token.address_spl);
   const ataSolanaWallet = getAssociatedTokenAddressSync(tokenMint, solanaWallet.publicKey);
   {
@@ -96,16 +90,17 @@ async function transferTokenToMemberWallet(connection, solanaWallet, memberWalle
 }
 
 // todo refactoring wneon airdrop
-async function transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, amount) {
+async function transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, amount, neonTransferAddress) {
   const wNeonFactory = await ethers.getContractFactory('WNEON');
   const fullAmount = ethers.parseUnits(amount.toString(), token.decimals);
   const tokenContract = wNeonFactory.attach(token.address);
   const tokenMint = new PublicKey(token.address_spl);
   const ataSolanaWallet = getAssociatedTokenAddressSync(tokenMint, solanaWallet.publicKey);
+  await createAssociatedTokenAccount(connection, solanaWallet, solanaWallet.publicKey, ataSolanaWallet, tokenMint);
   const { value } = await connection.getTokenAccountBalance(ataSolanaWallet);
   console.log(`Token Account: ${ataSolanaWallet.toBase58()}`);
   console.log(`Balance: ${value.uiAmountString} ${token.symbol}`);
-  if (fullAmount > BigInt(value.amount)) {
+  if (ethers.parseUnits(amount.toString(), 9) > BigInt(value.amount)) {
     const balance = await tokenContract.balanceOf(deployer.address);
     if (fullAmount > balance) {
       console.log(`Mint ${amount} ${token.symbol}`);
@@ -114,26 +109,42 @@ async function transferNeonTokenToBankAccount(connection, solanaWallet, deployer
       await asyncTimeout(5e3);
       const balance = await tokenContract.balanceOf(deployer.address);
       console.log(`Deployer ${deployer.address}`);
-      console.log(`Balance ${balance} ${token.symbol}`);
+      console.log(`Balance ${new Big(balance.toString()).div(10 ** 18)} ${token.symbol}`);
     }
     try {
       console.log(`Transfer ${amount} ${token.symbol} to ${solanaWallet.publicKey.toBase58()} wallet`);
-      await createAssociatedTokenAccount(connection, solanaWallet, solanaWallet.publicKey, ataSolanaWallet, tokenMint);
-      const transferSolanaData = erc20ForSPLContract().encodeFunctionData('transferSolana', [ataSolanaWallet.toBuffer(), fullAmount]);
-      const transaction = createMintNeonTransaction(deployer.address, token, transferSolanaData);
-      const feeData = await provider.getFeeData();
-      transaction.gasPrice = feeData.gasPrice;
-      transaction.gasLimit = 1e7;
-      transaction.nonce = await deployer.getNonce();
-      const result = await deployer.sendTransaction(transaction);
-      console.log(`Transfer transaction:`);
-      console.log(JSON.stringify(result, null, 2));
-      await result.wait(1e3);
+
+      {
+        console.log(`Unwrap wNEON to NEON in ${deployer.address} wallet`);
+        const data = neonWrapper2Contract().encodeFunctionData('withdraw', [ethers.parseUnits(amount.toString(), token.decimals)]);
+        const transaction = wrappedNeonTransaction(deployer.address, token.address, data);
+        const feeData = await provider.getFeeData();
+        transaction.gasPrice = feeData.gasPrice;
+        transaction.gasLimit = 1e7;
+        transaction.nonce = await deployer.getNonce();
+        const result = await deployer.sendTransaction(transaction);
+        console.log(`Unwrap transaction: ${JSON.stringify(result, null, 2)}`);
+        await result.wait();
+      }
+
+      {
+        const balance = await ethers.provider.getBalance(deployer.address);
+        console.log(`Balance ${new Big(balance.toString()).div(10 ** 18)} ${token.symbol}`);
+        const data = neonWrapperContract().encodeFunctionData('withdraw', [solanaWallet.publicKey.toBuffer()]);
+        const transaction = neonNeonTransaction(deployer.address, neonTransferAddress, amount, data);
+        const feeData = await provider.getFeeData();
+        transaction.gasPrice = feeData.gasPrice;
+        transaction.gasLimit = 1e7;
+        transaction.nonce = await deployer.getNonce();
+        const result = await deployer.sendTransaction(transaction);
+        console.log(`Transfer transaction:`);
+        console.log(JSON.stringify(result, null, 2));
+        await result.wait();
+      }
       await asyncTimeout(3e3);
       const { value } = await connection.getTokenAccountBalance(ataSolanaWallet);
       console.log(`Token Account: ${ataSolanaWallet.toBase58()}`);
       console.log(`Balance: ${value.uiAmountString} ${token.symbol}`);
-      return result;
     } catch (e) {
       console.log(e);
     }
@@ -210,3 +221,7 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+module.exports = {
+  transferNeonTokenToBankAccount
+};
