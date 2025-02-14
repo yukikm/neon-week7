@@ -13,9 +13,7 @@ const {
   neonNeonTransaction
 } = require('@neonevm/token-transfer-core');
 const { treasuryPoolAddressSync, getProxyState } = require(`@neonevm/solana-sign`);
-const {
-  Connection, PublicKey, Keypair, Transaction, LAMPORTS_PER_SOL
-} = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair, Transaction } = require('@solana/web3.js');
 const { default: bs58 } = require('bs58');
 const { asyncTimeout, sendSolanaTransaction, transferSolToMemberWallet } = require('./utils');
 const { addresses } = require('../artifacts/addresses');
@@ -170,8 +168,6 @@ async function transferERC20TokenToBankAccount(connection, solanaWallet, deploye
     }
     try {
       console.log(`Transfer ${amount} ${token.symbol} to ${solanaWallet.publicKey.toBase58()} wallet`);
-      // const tokenMint = new PublicKey(token.address_spl);
-      // const ataSolanaWallet = getAssociatedTokenAddressSync(tokenMint, solanaWallet.publicKey);
       const transferSolanaData = erc20ForSPLContract().encodeFunctionData('transferSolana', [ataSolanaWallet.toBuffer(), fullAmount]);
       const transaction = createMintNeonTransaction(deployer.address, token, transferSolanaData);
       const feeData = await provider.getFeeData();
@@ -222,6 +218,3 @@ main()
     process.exit(1);
   });
 
-module.exports = {
-  transferNeonTokenToBankAccount
-};

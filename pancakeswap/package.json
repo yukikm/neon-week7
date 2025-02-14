@@ -5,7 +5,7 @@
   "scripts": {
     "deploy": "npx hardhat run ./scripts/pancakeswap-demo-setup.js --network curvestand",
     "airdrop": "npx hardhat run ./scripts/mint-tokens.js --network curvestand",
-    "test": "npx hardhat run ./scripts/wsol-test.js --network curvestand"
+    "test": "npx hardhat run scripts/transfer-tests.js --network curvestand"
   },
   "author": "maxpolizzo@gmail.com",
   "license": "MIT",
