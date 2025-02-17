@@ -1,9 +1,8 @@
+import { ScheduledTransactionStatus } from '@neonevm/solana-sign';
 import React, { FC, useMemo } from 'react';
+import { PROXY_ENV, SOLANA_URL } from '../../../environments';
 import { FormState } from '../../../models';
 import './SwapState.css';
-import { ScheduledTransactionStatus } from '@neonevm/solana-sign/dist/types/models/api';
-import { SOLANA_URL } from '../../../environments';
-
 
 const Status: FC = ({ formState, loading }: { formState: FormState, loading: boolean }) => {
   const status = useMemo(() => {
@@ -11,7 +10,6 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
     if (data) {
       switch (data.activeStatus) {
         case 'NotStarted':
-          return 'loading-gray';
         case 'InProgress':
           return 'loading';
         case 'Success':
@@ -23,7 +21,7 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
       }
     }
     if (loading) {
-      return `loading-gray`;
+      return 'loading';
     }
     return ``;
   }, [formState.data, loading]);
@@ -42,14 +40,31 @@ const Status: FC = ({ formState, loading }: { formState: FormState, loading: boo
   );
 };
 
-function SwapState({ formState, loading, executeState, setLoading, transactionCancel }: {
+interface Props {
   formState: FormState,
   loading: boolean,
   setLoading: (size: boolean) => void,
   executeState: (state: FormState) => Promise<void>
   transactionCancel: (state: ScheduledTransactionStatus) => Promise<void>
-}) {
+}
+
+function SwapState({ formState, loading, executeState, setLoading, transactionCancel }: Props) {
   const show = false;
+
+  const canRestart = useMemo(() => {
+    return !loading && ['Empty', 'Failed', 'Skipped', 'Empty'].includes(formState.status);
+  }, [loading, formState]);
+
+  const canStart = useMemo(() => {
+    return !loading && ['NotStarted'].includes(formState.status);
+  }, [loading, formState]);
+
+  const explorerUrl = useMemo(() => {
+    const solscan = `https://solscan.io/tx/${formState.signature}?cluster=devnet`;
+    const solana = `https://explorer.solana.com/tx/${formState.signature}?cluster=custom&customUrl=${SOLANA_URL}`;
+    return PROXY_ENV === 'devnet' ? solscan : solana;
+  }, [formState.signature]);
+
   const handleCancel = async (trx: ScheduledTransactionStatus): Promise<void> => {
     if (!loading) {
       await transactionCancel(trx);
@@ -67,17 +82,9 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
     }
   };
 
-  const canRestart = useMemo(() => {
-    return !loading && ['Empty', 'Failed', 'Skipped', 'Empty'].includes(formState.status);
-  }, [loading, formState]);
-
-  const canStart = useMemo(() => {
-    return !loading && ['NotStarted'].includes(formState.status);
-  }, [loading, formState]);
-
   const showLink = (trx: ScheduledTransactionStatus): boolean => {
     return ['Success', 'Empty', 'Failed', 'Skipped'].includes(trx.status);
-  }
+  };
 
   return (
     <div className="form-state">
@@ -85,11 +92,9 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
         <div className="form-state-title-item title">
           <div className="form-state-number">{formState.id + 1}</div>
           <div className="title">{formState.title}</div>
-          {formState.signature?.length > 0 &&
-            <a href={`https://explorer.solana.com/tx/${formState.signature}?cluster=custom&customUrl=${SOLANA_URL}`} target="_blank">
-              {/*<a href={`https://solscan.io/tx/${formState.signature}?cluster=devnet`} target="_blank">*/}
-              <img src="/assets/solscan.webp" width={18} height={18} alt="" />
-            </a>}
+          {formState.signature?.length > 0 && <a href={explorerUrl} target="_blank">
+            <img src="/assets/solscan.webp" width={18} height={18} alt="" />
+          </a>}
         </div>
         <div className="form-state-title-item loading">
           {canRestart &&
@@ -104,8 +109,10 @@ function SwapState({ formState, loading, executeState, setLoading, transactionCa
           {formState.data.transactions.map((trx, key) => {
             return <div className="form-state-transaction" key={key}>
               <div className="transaction-item">
-                {showLink(trx) ? <a href={`https://devnet.neonscan.org/tx/${trx.transactionHash}`} target='_blank'>{trx.transactionHash}</a>
-                : <span>{trx.transactionHash}</span>}
+                {showLink(trx) ?
+                  <a href={`https://devnet.neonscan.org/tx/${trx.transactionHash}`}
+                     target="_blank">{trx.transactionHash}</a>
+                  : <span>{trx.transactionHash}</span>}
               </div>
               <div className="transaction-item">
                 {show && trx.status === 'NotStarted' &&

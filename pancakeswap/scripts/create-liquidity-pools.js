@@ -164,7 +164,7 @@ async function createPairAndAddLiquidity(
     deployer.address
   );
 
-  return pairAddress;
+  return { pair: pairAddress, a: tokenAAddress, b: tokenBAddress };
 }
 
 async function createPair(

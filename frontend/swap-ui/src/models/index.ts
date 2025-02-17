@@ -4,7 +4,8 @@ import { Connection, PublicKey, TokenAmount, Transaction } from '@solana/web3.js
 import {
   NeonAddress,
   NeonProxyRpcApi,
-  ScheduledTransaction, ScheduledTreeAccount,
+  ScheduledTransaction,
+  ScheduledTreeAccount,
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
 import { JsonRpcProvider } from 'ethers';
@@ -55,7 +56,7 @@ export interface SwapTokenCommonData {
   tokenFrom: CSPLToken;
   tokenTo: CSPLToken;
   pancakeRouter: NeonAddress;
-  pancakePair: NeonAddress;
+  pancakePair: PancakePair;
   chainId: number;
   amountFrom: number;
   amountTo: number;
@@ -110,4 +111,10 @@ export interface SwapTokensData {
   chainId: number;
   amount: number;
   nonce: number;
+}
+
+export interface PancakePair {
+  pair: NeonAddress;
+  a: NeonAddress;
+  b: NeonAddress;
 }
