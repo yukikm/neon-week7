@@ -11,14 +11,20 @@ type Props = {
     amount: string;
   },
   type: 'from' | 'to';
+  maxAmount: number;
   label: string;
   tokensList: CTokenBalance[];
-  excludedToken: string,
+  excludedToken: string;
+  disabled: boolean;
+  loading: boolean;
   setTokenData(type: 'from' | 'to', data: { token: string; amount: string; }): void;
 };
 
 export const TokenField: React.FC = (props: Props) => {
-  const { data, tokensList, type, label, setTokenData, excludedToken } = props;
+  const {
+    data, tokensList, type,
+    label, setTokenData, excludedToken, disabled, loading, maxAmount
+  } = props;
   const [openModal, setOpenModal] = useState(false);
 
   const tokenIcon = useMemo(() => {
@@ -33,7 +39,7 @@ export const TokenField: React.FC = (props: Props) => {
     if (id > -1) {
       const token = tokensList[id];
       const balance = token.balance?.uiAmount ?? '';
-      return balance ? `${balance} ${symbol}` : '0';
+      return balance ? balance : '0';
     }
     return `0`;
   }, [data, tokensList]);
@@ -65,7 +71,7 @@ export const TokenField: React.FC = (props: Props) => {
 
   const handleInput = (amount: string): void => {
     const b = Number(amount);
-    const a = b < 0 ? '0' : b > 10 ? '10' : amount;
+    const a = b < 0 ? '0' : b > maxAmount ? maxAmount.toString() : amount;
     const c = a ? a : '';
     setTokenData(type, { amount: c, token: data.token });
   };
@@ -93,10 +99,13 @@ export const TokenField: React.FC = (props: Props) => {
             <span className="token-name">{tokenName}</span>
           </button>
         </div>
-        <div className="token-field-item amount w-full">
-          <AmountInput decimalsLimit={token?.decimals} maxLength={10} onValueChange={handleInput}
-                       value={data.amount}
-                       placeholder="0.00" />
+        <div className="token-field-item amount w-full relative">
+          {loading && <div className="absolute right-[-18px] top-[9px] animate-spin">
+            <img src="/assets/icons/loading.svg" width="15px" height="15px" alt="" />
+          </div>}
+          <AmountInput decimalsLimit={token?.decimals} onValueChange={handleInput}
+                       value={data.amount} placeholder="0.00" disabled={disabled}
+                       className={`transition-all ${loading ? 'opacity-75' : ''}`} />
         </div>
       </div>
       <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal}

@@ -3,12 +3,25 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Big } from 'big.js';
 import { TokenField } from './components/TokenField/TokenField';
 import SwapState from './components/SwapState/SwapState';
 import { useProxyConnection } from '../wallet/Connection';
-import { CTokenBalance, FormState, SwapTokensResponse, TransactionGas } from '../models';
-import { approveTokensMultiple, withdrawTokensMultiple } from '../api/swap';
+import {
+  CSPLToken,
+  CTokenBalance,
+  FormState,
+  PancakePair,
+  SwapTokensResponse,
+  TransactionGas
+} from '../models';
+import {
+  approveSwapAndWithdrawTokensMultiple,
+  estimateSwapAmount,
+  withdrawTokensMultiple
+} from '../api/swap';
 import { swap, tokensList } from '../data/tokens';
+import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
 
 interface FormData {
@@ -18,6 +31,7 @@ interface FormData {
 
 const DURATION = 3e5;
 const DELAY = 1e3;
+const MAX_AMOUNT = PROXY_ENV === 'devnet' ? 1 : 10;
 
 export const SwapForm: React.FC = () => {
   const { connected, publicKey } = useWallet();
@@ -34,27 +48,43 @@ export const SwapForm: React.FC = () => {
   } = useProxyConnection();
   const [one, two] = tokensList;
   const [formData, setFormData] = useState<FormData>({
-    from: { token: one.symbol!, amount: '1' },
-    to: { token: two.symbol!, amount: '1' }
+    from: { token: one.symbol!, amount: '' },
+    to: { token: two.symbol!, amount: '' }
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [transactionStates, setTransactionStates] = useState<FormState[]>([]);
   const transactionsRef = useRef<FormState[]>([]);
   const [error, setError] = useState<string>(``);
+  const [fieldLoading, setFieldLoading] = useState<boolean>(false);
 
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
     const tokenFrom = tokenBalanceList.find(t => t.token.symbol === formData.from.token)!;
     const a = Number(from.amount);
-    const b = Number(from.amount);
+    const b = Number(to.amount);
     const c = [NaN, 0];
     return !from.amount || !to.amount || c.includes(a) || c.includes(b) || !tokenFrom?.balance?.amount;
   }, [formData, tokenBalanceList]);
+
+  const tokenFromTo = useMemo<[CSPLToken, CSPLToken]>(() => {
+    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
+    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
+    return [tokenFrom, tokenTo];
+  }, [formData.from.token, formData.to.token]);
+
+  const pancakePair = useMemo<PancakePair>(() => {
+    const [tokenFrom, tokenTo] = tokenFromTo;
+    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
+    return swap.pairs[pair];
+  }, [tokenFromTo]);
 
   const buttonText = useMemo((): string => {
     const { from, to } = formData;
     if (!connected) {
       return `Connect wallet`;
+    }
+    if (!pancakePair?.pair) {
+      return `Unsupported pair`;
     }
     if (from.amount?.length === 0 || to.amount?.length === 0) {
       return `Enter an amount`;
@@ -63,21 +93,14 @@ export const SwapForm: React.FC = () => {
       return `Wait...`;
     }
     return `Swap`;
-  }, [formData, connected, loading]);
-
-  const pancakePair = useMemo<NeonAddress>(() => {
-    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
-    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
-    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
-    return swap.pairs[pair];
-  }, [formData.from.token, formData.to.token]);
+  }, [formData, connected, loading, pancakePair]);
 
   const formDisabled = useMemo<boolean>(() => {
-    return !publicKey || !pancakePair || formValidation || loading;
-  }, [formValidation, loading, pancakePair, publicKey]);
+    return !publicKey || !pancakePair || formValidation || loading || fieldLoading;
+  }, [formValidation, loading, pancakePair, publicKey, fieldLoading]);
 
   const changeTransactionStates = (state: FormState): void => {
-    setTransactionStates(currentState => currentState.map(st => {
+    setTransactionStates(prev => prev.map(st => {
       if (st.id === state.id) {
         return state;
       }
@@ -86,7 +109,7 @@ export const SwapForm: React.FC = () => {
   };
 
   const addTransactionStates = (states: FormState[]): void => {
-    setTransactionStates(states);
+    setTransactionStates(_ => states);
   };
 
   const resetTransactionStates = (): void => {
@@ -94,13 +117,12 @@ export const SwapForm: React.FC = () => {
   };
 
   const approveAndSwap = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
-    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
-    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
+    const [tokenFrom, tokenTo] = tokenFromTo;
     const amountFrom = Number(formData.from.amount);
     const amountTo = Number(formData.to.amount);
     const pancakeRouter: NeonAddress = swap.router;
 
-    return approveTokensMultiple({
+    return approveSwapAndWithdrawTokensMultiple({
       transactionGas,
       nonce,
       proxyApi,
@@ -119,12 +141,9 @@ export const SwapForm: React.FC = () => {
   };
 
   const withdrawTokens = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
-    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
-    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
+    const [tokenFrom, tokenTo] = tokenFromTo;
     const amountFrom = Number(formData.from.amount);
     const amountTo = Number(formData.to.amount);
-    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
-    const pancakePair = swap.pairs[pair];
     const pancakeRouter: NeonAddress = swap.router;
 
     return withdrawTokensMultiple({
@@ -200,12 +219,6 @@ export const SwapForm: React.FC = () => {
 
   const executeTransactionsStates = async (transactionStates: FormState[]): Promise<void> => {
     for (const state of transactionStates) {
-      const [one, two] = transactionStates;
-      if (state.id === two.id) {
-        if (!one.isCompleted) {
-          return;
-        }
-      }
       console.log(`Run transaction ${state.title}`);
       await executeTransactionState(state);
       await delay(1e3);
@@ -214,7 +227,7 @@ export const SwapForm: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      const approveState: FormState = {
+      const approveSwapAndWithdraw: FormState = {
         id: 0,
         title: `Approve and Swap tokens`,
         status: `NotStarted`,
@@ -223,16 +236,16 @@ export const SwapForm: React.FC = () => {
         method: approveAndSwap,
         data: undefined
       };
-      const swapState: FormState = {
-        id: 1,
-        title: `Withdraw tokens to Solana wallet`,
-        status: `NotStarted`,
-        signature: ``,
-        isCompleted: false,
-        method: withdrawTokens,
-        data: undefined
-      };
-      transactionsRef.current = [approveState, swapState];
+      // const swapState: FormState = {
+      //   id: 1,
+      //   title: `Withdraw tokens to Solana wallet`,
+      //   status: `NotStarted`,
+      //   signature: ``,
+      //   isCompleted: false,
+      //   method: withdrawTokens,
+      //   data: undefined
+      // };
+      transactionsRef.current = [approveSwapAndWithdraw/*, swapState*/];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
       setLoading(false);
@@ -248,6 +261,10 @@ export const SwapForm: React.FC = () => {
 
   const handleSwitch = () => {
     const { from, to } = formData;
+    // note: potential bug
+    if (Number(to.amount) > MAX_AMOUNT) {
+      to.amount = MAX_AMOUNT.toString();
+    }
     setFormData({ from: to, to: from });
     setError('');
     resetTransactionStates();
@@ -279,7 +296,7 @@ export const SwapForm: React.FC = () => {
             const { value: balance } = await connection.getTokenAccountBalance(tokenAddress);
             cTokenBalance['balance'] = balance;
           } catch (e) {
-            console.log(e);
+            console.log(e?.message);
           }
         }
         tokens.push(cTokenBalance);
@@ -294,11 +311,30 @@ export const SwapForm: React.FC = () => {
   useEffect(() => {
     if (!connected) {
       resetTransactionStates();
+      setFormData(prevState => {
+        prevState.from.amount = '';
+        prevState.to.amount = '';
+        return prevState;
+      });
     }
   }, [connected]);
 
+  useEffect(() => {
+    const amountFrom = formData.from.amount;
+    if (pancakePair && amountFrom && Number(amountFrom) > 0) {
+      setFieldLoading(true);
+      estimateSwapAmount(provider, tokenFromTo, amountFrom, pancakePair).then(balance => {
+        const [, tokenTo] = tokenFromTo;
+        const amount = new Big(balance.toString()).div(new Big(10).pow(tokenTo.decimals)).toString();
+        handleTokenData('to', { token: formData.to.token, amount });
+      }).then(() => delay(300)).then(() => {
+        setFieldLoading(false);
+      });
+    }
+  }, [formData.from.amount, tokenFromTo, provider, pancakePair]);
+
   return (
-    <div className='max-w-[624px]'>
+    <div className="max-w-[624px]">
       <div className="form-group">
         <div className="form-label !mb-[10px]">
           <label>Contract version</label>
@@ -313,17 +349,24 @@ export const SwapForm: React.FC = () => {
         <div className="form-field">
           <TokenField data={formData.from} tokensList={tokenBalanceList}
                       excludedToken={formData.to.token}
-                      setTokenData={handleTokenData} label="From" type="from"></TokenField>
+                      setTokenData={handleTokenData}
+                      maxAmount={MAX_AMOUNT}
+                      label="From" type="from"></TokenField>
         </div>
         <div className="form-divider">
-          <button className="switch-tokens" type={'button'} onClick={handleSwitch}>
+          <button className="switch-tokens" type={'button'} onClick={handleSwitch}
+                  disabled={fieldLoading}>
             <img src="/assets/icons/switch.svg" alt="Switch" />
           </button>
         </div>
         <div className="form-field">
           <TokenField data={formData.to} tokensList={tokenBalanceList}
                       excludedToken={formData.from.token}
-                      setTokenData={handleTokenData} label="To" type="to"></TokenField>
+                      setTokenData={handleTokenData}
+                      maxAmount={MAX_AMOUNT}
+                      loading={fieldLoading}
+                      disabled={true}
+                      label="To" type="to"></TokenField>
         </div>
       </div>
       {transactionStates.length > 0 && <div className="form-group">

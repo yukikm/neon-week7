@@ -21,12 +21,36 @@ function data() {
       router: '0x9c58018c0599153cDCF5cEA9F1512f58dcFbF7a6',
       factory: '0x2b76CBDfaE4EC1605E510587815d09343378c633',
       pairs: {
-        'usdc/wneon': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
-        'wneon/usdc': '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
-        'usdc/wsol': '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
-        'wsol/usdc': '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
-        'wneon/v1token': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31',
-        'v1token/wneon': '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31'
+        'usdc/wneon': {
+          pair: '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
+          a: '0x11adC2d986E334137b9ad0a0F290771F31e9517F',
+          b: '0x512E48836Cd42F3eB6f50CEd9ffD81E0a7F15103'
+        },
+        'wneon/usdc': {
+          pair: '0x80935329FCC9ace53177F0E91026668EB0c09C7E',
+          a: '0x11adC2d986E334137b9ad0a0F290771F31e9517F',
+          b: '0x512E48836Cd42F3eB6f50CEd9ffD81E0a7F15103'
+        },
+        'usdc/wsol': {
+          pair: '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
+          a: '0x512E48836Cd42F3eB6f50CEd9ffD81E0a7F15103',
+          b: '0xc7Fc9b46e479c5Cb42f6C458D1881e55E6B7986c'
+        },
+        'wsol/usdc': {
+          pair: '0x5ec7becAB1289302e76f6c06aadc486AfB82Dadf',
+          a: '0x512E48836Cd42F3eB6f50CEd9ffD81E0a7F15103',
+          b: '0xc7Fc9b46e479c5Cb42f6C458D1881e55E6B7986c'
+        },
+        'wneon/v1token': {
+          pair: '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31',
+          a: '0x11adC2d986E334137b9ad0a0F290771F31e9517F',
+          b: '0x7a8F86eB7f15111c6bD2BfC57c7616fC12D56284'
+        },
+        'v1token/wneon': {
+          pair: '0xE036225B170611fF55D981db73Db0Fa7BA3dbe31',
+          a: '0x11adC2d986E334137b9ad0a0F290771F31e9517F',
+          b: '0x7a8F86eB7f15111c6bD2BfC57c7616fC12D56284'
+        }
       }
     };
     tokensList = [
@@ -56,7 +80,7 @@ function data() {
         address_spl: '89dre8rZjLNft7HoupGiyxu3MNftR577ZYu8bHe2kK7g',
         name: 'Wrapped Neon',
         symbol: 'wNEON',
-        decimals: 9
+        decimals: 18
       }
     ];
   }

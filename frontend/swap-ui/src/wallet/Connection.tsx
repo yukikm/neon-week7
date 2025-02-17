@@ -25,6 +25,7 @@ export interface ProxyConnectionContextData {
   walletBalance: number;
 
   sendTransaction(transaction: Transaction, commitment?: Commitment, options?: SendOptions): Promise<string | undefined>;
+
   getWalletBalance(): Promise<void>;
 }
 
@@ -39,12 +40,17 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
   const [walletBalance, setWalletBalance] = useState(0);
 
   const getWalletBalance = async () => {
-    if (publicKey && connection) {
-      const b = await connection.getBalance(publicKey);
-      if (b) {
-        setWalletBalance(b);
+    try {
+      if (publicKey && connection) {
+        const b = await connection.getBalance(publicKey);
+        if (b) {
+          setWalletBalance(b);
+        }
+      } else {
+        setWalletBalance(0);
       }
-    } else {
+    } catch (e) {
+      console.log(e);
       setWalletBalance(0);
     }
   };
