@@ -105,7 +105,8 @@ export const TokenField: React.FC = (props: Props) => {
           </div>}
           <AmountInput decimalsLimit={token?.decimals} onValueChange={handleInput}
                        value={data.amount} placeholder="0.00" disabled={disabled}
-                       className={`transition-all ${loading ? 'opacity-75' : ''}`} />
+                       className={`transition-all ${loading ? 'opacity-75' : ''}`}
+                       intlConfig={{ locale: 'en-UA' }} />
         </div>
       </div>
       <TokensModal excludedToken={excludedToken} tokensList={tokensList} openModal={openModal}

@@ -29,6 +29,7 @@ const memberWallets = [
   `Cvy4tJfTJWqEN7QkXaKKmB8sZ2eU7FnWwTVbzWQLLtz4`,
   /*******************DEV*********************/
   `597t2sa4xA5nmpksr4By176PDeCgwjiTfsFCymxq1pyY`,
+  `25ZACo5FyJXgs6u2rHi6E2jimbMdvwEy2gvvBVuG7J5x`,
   `2uiFt7tpJFkK8PUTmZt4waWouhTd2hPeiLJpJuv4qt9N`,
   /*****************PRODUCT******************/
   `9MixdkmJUX6tDqPi51u4UuK1QgYVSXZZXnfdv6KhWQDL`,
@@ -217,4 +218,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-

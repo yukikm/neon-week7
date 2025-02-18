@@ -319,6 +319,7 @@ export async function estimateSwapAmount(provider: JsonRpcProvider, tokenFromTo:
     const router = new Contract(swap.router, pancakeSwapRouterAbi, provider);
     const pairContract = new Contract(pancakePair.pair, pancakeSwapPairAbi, provider);
     const [one, two] = await pairContract.getReserves();
+    console.log('getReserves', one, two);
     const [from, to] = tokenFrom.address === pancakePair.a ? [one, two] : [two, one];
     return router.getAmountOut(amountIn.toString(), from, to);
   } catch (e) {
