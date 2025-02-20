@@ -72,17 +72,18 @@ async function createPairAndAddLiquidity(
   tokenAAddress,
   tokenBAddress,
   amountA,
-  amountB
+  amountB,
+  contract = `ERC20ForSplMintable`
 ) {
   const pancakeRouterContractFactory = await ethers.getContractFactory('PancakeRouter');
   const pancakeRouter = pancakeRouterContractFactory.attach(pancakeRouterAddress);
   const WNEONAddress = await pancakeRouter.WETH();
   const TokenAContractFactory = tokenAAddress === WNEONAddress
     ? await ethers.getContractFactory('WNEON')
-    : await ethers.getContractFactory('ERC20ForSplMintable');
+    : await ethers.getContractFactory(contract);
   const TokenBContractFactory = tokenBAddress === WNEONAddress
     ? await ethers.getContractFactory('WNEON')
-    : await ethers.getContractFactory('ERC20ForSplMintable');
+    : await ethers.getContractFactory(contract);
 
   const tokenA = TokenAContractFactory.attach(tokenAAddress);
   const tokenB = TokenBContractFactory.attach(tokenBAddress);
@@ -92,7 +93,6 @@ async function createPairAndAddLiquidity(
   const tokenBDecimals = await tokenB.decimals();
   const tokenAAmount = ethers.parseUnits(amountA.toString(), tokenADecimals);
   const tokenBAmount = ethers.parseUnits(amountB.toString(), tokenBDecimals);
-
 
   const pairAddress = await createPair(
     pancakeFactoryAddress,
@@ -112,10 +112,10 @@ async function createPairAndAddLiquidity(
       await tokenA.mint(deployer.address, amountToMint);
     }
     await asyncTimeout(3000);
-    console.log('\nMinted ' + ethers.formatUnits(amountToMint.toString(), tokenADecimals) + ' ' + tokenASymbol + ' to deployer address ' + deployer.address);
+    console.log(`Minted ${ethers.formatUnits(amountToMint.toString(), tokenADecimals)} ${tokenASymbol} to deployer address ${deployer.address}`);
     balanceA = await tokenA.balanceOf(deployer.address);
   }
-  console.log('\nDeployer ' + tokenASymbol + ' balance: ' + ethers.formatUnits(balanceA.toString(), tokenADecimals));
+  console.log(`Deployer ${tokenASymbol} balance: ${ethers.formatUnits(balanceA.toString(), tokenADecimals)}`);
 
   // Approve router to spend token A on behalf of deployer if needed
   let allowanceA = await tokenA.allowance(deployer.address, pancakeRouterAddress);
@@ -123,9 +123,9 @@ async function createPairAndAddLiquidity(
     await tokenA.approve(pancakeRouterAddress, tokenAAmount);
     await asyncTimeout(3000);
     allowanceA = await tokenA.allowance(deployer.address, pancakeRouterAddress);
-    console.log('\nApproved PancakeRouter to spend ' + ethers.formatUnits(allowanceA.toString(), tokenADecimals) + ' ' + tokenASymbol + ' on behalf of deployer');
+    console.log(`Approved PancakeRouter to spend ${ethers.formatUnits(allowanceA.toString(), tokenADecimals)} ${tokenASymbol} on behalf of deployer`);
   }
-  console.log('\nPancakeRouter ' + tokenASymbol + ' allowance: ' + ethers.formatUnits(allowanceA.toString(), tokenADecimals));
+  console.log(`PancakeRouter ${tokenASymbol} allowance: ${ethers.formatUnits(allowanceA.toString(), tokenADecimals)}`);
 
   // Mint token B to deployer if needed
   let balanceB = await tokenB.balanceOf(deployer.address);
@@ -137,10 +137,10 @@ async function createPairAndAddLiquidity(
       await tokenB.mint(deployer.address, amountToMint);
     }
     await asyncTimeout(3000);
-    console.log('\nMinted ' + ethers.formatUnits(amountToMint.toString(), tokenBDecimals) + ' ' + tokenBSymbol + ' to deployer address ' + deployer.address);
+    console.log(`Minted ${ethers.formatUnits(amountToMint.toString(), tokenBDecimals)} ${tokenBSymbol} to deployer address ${deployer.address}`);
     balanceB = await tokenB.balanceOf(deployer.address);
   }
-  console.log('\nDeployer ' + tokenBSymbol + ' balance: ' + ethers.formatUnits(balanceB.toString(), tokenBDecimals));
+  console.log(`Deployer ${tokenBSymbol} balance: ${ethers.formatUnits(balanceB.toString(), tokenBDecimals)}`);
 
   // Approve router to spend token B on behalf of deployer if needed
   let allowanceB = await tokenB.allowance(deployer.address, pancakeRouterAddress);
@@ -148,9 +148,9 @@ async function createPairAndAddLiquidity(
     await tokenB.approve(pancakeRouterAddress, tokenBAmount);
     await asyncTimeout(3000);
     allowanceB = await tokenB.allowance(deployer.address, pancakeRouterAddress);
-    console.log('\nApproved PancakeRouter to spend ' + ethers.formatUnits(allowanceB.toString(), tokenBDecimals) + ' ' + tokenBSymbol + ' on behalf of deployer');
+    console.log(`Approved PancakeRouter to spend ${ethers.formatUnits(allowanceB.toString(), tokenBDecimals)} ${tokenBSymbol} on behalf of deployer`);
   }
-  console.log('\nPancakeRouter ' + tokenBSymbol + ' allowance: ' + ethers.formatUnits(allowanceB.toString(), tokenBDecimals));
+  console.log(`PancakeRouter ${tokenBSymbol} allowance: ${ethers.formatUnits(allowanceB.toString(), tokenBDecimals)}`);
 
   await addLiquidity(
     pancakeFactoryAddress,
@@ -181,9 +181,9 @@ async function createPair(
     await pancakeFactory.createPair(tokenAAddress, tokenBAddress);
     await asyncTimeout(3000);
     pairAddress = await pancakeFactory.getPair(tokenAAddress, tokenBAddress);
-    console.log('\nDeployed new ' + tokenASymbol + '-' + tokenBSymbol + ' pair at address: ' + pairAddress);
+    console.log(`Deployed new ${tokenASymbol}/${tokenBSymbol} pair at address: ${pairAddress}`);
   } else {
-    console.log('\n' + tokenASymbol + '-' + tokenBSymbol + ' pair already exists at address: ' + pairAddress);
+    console.log(`${tokenASymbol}/${tokenBSymbol} pair already exists at address: ${pairAddress}`);
   }
 
   return pairAddress;
@@ -214,7 +214,7 @@ async function addLiquidity(
     Date.now() + 1000000000
   );
   await asyncTimeout(3000);
-  console.log('\nAdded liquidity to ' + tokenASymbol + '-' + tokenBSymbol + ' PancakePair');
+  console.log(`Added liquidity to ${tokenASymbol}/${tokenBSymbol} PancakePair`);
 
   const pancakeFactoryContractFactory = await ethers.getContractFactory('PancakeFactory');
   const pancakeFactory = pancakeFactoryContractFactory.attach(pancakeFactoryAddress);
@@ -223,14 +223,14 @@ async function addLiquidity(
   const pancakePairContractFactory = await ethers.getContractFactory('PancakePair');
   const pancakePair = pancakePairContractFactory.attach(pairAddress);
   const pairReserves = await pancakePair.getReserves();
-  console.log('--> Pair reserves: [' + pairReserves[0] + ', ' + pairReserves[1] + ']');
+  console.log(`--> Pair reserves: [${pairReserves[0]}, ${pairReserves[1]}]`);
 
   const pancakeERC20ContractFactory = await ethers.getContractFactory('PancakeERC20');
   const pancakePairERC20 = pancakeERC20ContractFactory.attach(pairAddress);
   const pairDecimals = await pancakePairERC20.decimals();
   const LPBalance = await pancakePairERC20.balanceOf(toAddress);
-  console.log('--> LP address: ' + toAddress);
-  console.log('--> LP balance: ' + ethers.formatUnits(LPBalance.toString(), pairDecimals));
+  console.log(`--> LP address: ${toAddress}`);
+  console.log(`--> LP balance: ${ethers.formatUnits(LPBalance.toString(), pairDecimals)}`);
 }
 
 /*
@@ -243,5 +243,7 @@ main()
 */
 
 module.exports = {
-  createPairAndAddLiquidity
+  createPairAndAddLiquidity,
+  createPair,
+  addLiquidity
 };

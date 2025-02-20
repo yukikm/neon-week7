@@ -8,14 +8,14 @@ require('dotenv').config();
 async function main() {
   await run('compile');
 
-  console.log('\nNetwork name: ' + network.name);
+  console.log(`\nNetwork name: ${network.name}`);
 
   if (!process.env.DEPLOYER_KEY) {
     throw new Error('\nMissing private key: DEPLOYER_KEY');
   }
 
   const deployer = (await ethers.getSigners())[0];
-  console.log('\nDeployer address: ' + deployer.address);
+  console.log(`\nDeployer address: ${deployer.address}`);
 
   let deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
   const minBalance = ethers.parseUnits('10000', 18); // 10000 NEON
@@ -26,7 +26,7 @@ async function main() {
     await airdropNEON(deployer.address, parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)));
     deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
   }
-  console.log('\nDeployer balance: ' + ethers.formatUnits(deployerBalance.toString(), 18) + ' NEON');
+  console.log(`\nDeployer balance: ${ethers.formatUnits(deployerBalance.toString(), 18)} NEON`);
 
   // Deploy Pancakeswap exchnage contracts and WNEON
   const {
@@ -93,7 +93,7 @@ async function main() {
   );
 
   const result = {
-    tokens: [/*wNeon, */tokenA, tokenB],
+    tokensV1: [wNeon, tokenA, tokenB],
     swap: {
       neonTokenTransfer: NEONAddress,
       router: pancakeRouterAddress,

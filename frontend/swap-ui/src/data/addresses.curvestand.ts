@@ -1,5 +1,5 @@
-export const addresses = {
-  'tokens': [
+export const addressesCurvestand = {
+  tokensV1: [
     {
       'address': '0x3b797f94F7C49B58D7d6b67b8bDB33331d8569d3',
       'address_spl': 'HPsV9Deocecw3GeZv1FkAPNCBRfuVyfw9MMwjwRe1xaU',
@@ -22,10 +22,23 @@ export const addresses = {
       'decimals': 12
     }
   ],
-  'transfer': {
-    'neonTokenTransfer': '0xA4C62831B47C0Bb3a0cF569B7a22A41749a48ED7'
-  },
-  'swap': {
+  tokensV2: [
+    {
+      'address': '0x60e1D2e0f8950ca9b955fd89791B886C09539633',
+      'address_spl': 'BRnwhjNz9x6294Ju4GcS98qBw2zBz7fs2LZRRq7SLhXL',
+      'name': 'Token A (v2)',
+      'symbol': 'TOKEN_Av2',
+      'decimals': 9
+    },
+    {
+      'address': '0x2D6970930469599Cbb69cF59eDBab2B70fe948dB',
+      'address_spl': 'DMu3AQ38drunkBDQcP82gnVM2dGobF9gBvxNUuoFYBkS',
+      'name': 'Token B (v2)',
+      'symbol': 'TOKEN_Bv2',
+      'decimals': 9
+    }
+  ],
+  swap: {
     'router': '0x1Be1a24E9BF504b35901c1b76fBf77766D6b7647',
     'factory': '0xb3bFD57D36D09209fFF3B5D4052c9c271FE11AAc',
     'pairs': {
@@ -58,7 +71,20 @@ export const addresses = {
         'pair': '0x9b8454d105cC5Dc0324dA9e96a0e754Cbc428A40',
         'a': '0x0503Be7119b775BFC519c4F489C8D52521fEA207',
         'b': '0xC3529Db933f3D28323CD825c666CBBAf5BDbF7f8'
+      },
+      'token_av2/token_bv2': {
+        pair: '0x80710AFDCbB471EfC5e9511F6Ce8D73e1B6f592b',
+        a: '0x2D6970930469599Cbb69cF59eDBab2B70fe948dB',
+        b: '0x60e1D2e0f8950ca9b955fd89791B886C09539633'
+      },
+      'token_bv2/token_av2': {
+        pair: '0x80710AFDCbB471EfC5e9511F6Ce8D73e1B6f592b',
+        a: '0x2D6970930469599Cbb69cF59eDBab2B70fe948dB',
+        b: '0x60e1D2e0f8950ca9b955fd89791B886C09539633'
       }
     }
+  },
+  transfer: {
+    'neonTokenTransfer': '0xA4C62831B47C0Bb3a0cF569B7a22A41749a48ED7'
   }
 };

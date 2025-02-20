@@ -31,7 +31,13 @@ const {
   LAMPORTS_PER_SOL
 } = require('@solana/web3.js');
 const { default: bs58 } = require('bs58');
-const { sendSolanaTransaction, transferSolToMemberWallet, asyncTimeout } = require('./utils');
+const {
+  asyncTimeout,
+  sendSolanaTransaction,
+  transferSolToMemberWallet,
+  transferERC20TokenToBankAccount,
+  transferTokenToMemberWallet
+} = require('./utils');
 const { addresses } = require('../artifacts/addresses');
 
 require('dotenv').config();
@@ -189,4 +195,64 @@ async function wrappingSol() {
   await sendSolanaTransaction(connection, transaction, [solanaWallet]);
 }
 
-main();
+async function mintAndTransferTokensOnDevnet(tokens) {
+  const solanaUrl = process.env.SOLANA_RPC_NODE;
+  const connection = new Connection(solanaUrl);
+  const solanaWallet = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_WALLET));
+  const deployer = (await ethers.getSigners())[0];
+  const contract = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';
+  const memberWallet = new PublicKey(`3KKCLD3UCnzstxDisVmfFTp7iVSc7FoLwJxWfZk5cWCu`);
+
+  const ERC20ForSPLMintableContractFactory = await ethers.getContractFactory(contract);
+  for (const tokenKey of tokens) {
+    const amount = 10000;
+    const tokenContract = ERC20ForSPLMintableContractFactory.attach(tokenKey);
+    const tokenName = await tokenContract.name();
+    const tokenSymbol = await tokenContract.symbol();
+    const tokenDecimals = await tokenContract.decimals();
+    const tokenMint = await tokenContract.tokenMint();
+    const address_spl = bs58.encode(ethers.getBytes(tokenMint));
+    console.log(`Token address: ${tokenKey}`);
+    console.log(`Token spl address: ${address_spl}`);
+    console.log(`Token name: ${tokenName}`);
+    console.log(`Token symbol: ${tokenSymbol}`);
+    console.log(`Token decimals: ${tokenDecimals}`);
+
+    const token = {
+      address: tokenKey,
+      address_spl: address_spl,
+      name: tokenName,
+      symbol: tokenSymbol,
+      decimals: tokenDecimals
+    };
+
+    let balance = await tokenContract.balanceOf(deployer.address);
+    if (balance < amount) {
+      let amountToMint = BigInt(amount) - BigInt(balance);
+      await tokenContract.mint(deployer.address, amountToMint);
+
+      await asyncTimeout(3000);
+      console.log(`Minted ${ethers.formatUnits(amountToMint.toString(), tokenDecimals)} ${tokenSymbol} to deployer address ${deployer.address}`);
+      balance = await tokenContract.balanceOf(deployer.address);
+    }
+    console.log(`Deployer ${tokenSymbol} balance: ${ethers.formatUnits(balance.toString(), tokenDecimals)}`);
+    await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, amount, contract);
+    await transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, 100);
+  }
+}
+
+async function main() {
+  const tokens = [
+    `0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7`,
+    `0x165D4788242D98786a1db0dA79953d35702eADEd`
+  ];
+
+  await mintAndTransferTokensOnDevnet(tokens);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch(e => {
+    console.error(e);
+    process.exit(1);
+  });

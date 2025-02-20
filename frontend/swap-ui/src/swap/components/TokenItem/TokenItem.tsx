@@ -8,6 +8,10 @@ function TokenItem({ token, tokenSelect }: {
   tokenSelect(token: CTokenBalance)
 }) {
 
+  const tokenName = useMemo(() => {
+    return token.token.name ? token.token.name : '';
+  }, [token]);
+
   const tokenSymbol = useMemo(() => {
     return token.token.symbol ? token.token.symbol : '';
   }, [token]);
@@ -32,7 +36,7 @@ function TokenItem({ token, tokenSelect }: {
         <div className="token-icon">
           <img src={tokenIcon} width="36px" height="36px" alt={tokenSymbol} />
         </div>
-        <div className="token-name">{tokenSymbol}</div>
+        <div className="token-name">{tokenName}</div>
       </div>
       <div className="token-amount">{tokenBalance}</div>
     </button>
