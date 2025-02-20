@@ -93,7 +93,7 @@ async function main() {
   );
 
   const result = {
-    tokens: [/*wNeon, */tokenA, tokenB],
+    tokensV1: [wNeon, tokenA, tokenB],
     swap: {
       neonTokenTransfer: NEONAddress,
       router: pancakeRouterAddress,

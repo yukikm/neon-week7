@@ -32,14 +32,14 @@ export const addressesDevnet = {
   tokensV2: [
     {
       'address': '0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7',
-      'address_spl': '',
+      'address_spl': '4MymVAaQos56woWKnwJdBaKB1XTnQ397KE36WYAZ6qV6',
       'name': 'USDC (v2 Demo)',
       'symbol': 'USDCV2DEMO',
       'decimals': 6
     },
     {
       'address': '0x165D4788242D98786a1db0dA79953d35702eADEd',
-      'address_spl': '',
+      'address_spl': 'ExYuMMxSy5P6Lhbay2TX1BCn5LJRqFnKwW5d6EQpPHS4',
       'name': 'wSOL (v2 Demo)',
       'symbol': 'wSOLV2DEMO',
       'decimals': 9
@@ -81,13 +81,13 @@ export const addressesDevnet = {
       },
       'usdcv2demo/wsolv2demo': {
         pair: '0x1603C9B440dD982393dC23997C39573C3e4Ee4ec',
-        a: '0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7',
-        b: '0x165D4788242D98786a1db0dA79953d35702eADEd'
+        a: '0x165D4788242D98786a1db0dA79953d35702eADEd',
+        b: '0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7'
       },
       'wsolv2demo/usdcv2demo': {
         pair: '0x1603C9B440dD982393dC23997C39573C3e4Ee4ec',
-        a: '0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7',
-        b: '0x165D4788242D98786a1db0dA79953d35702eADEd'
+        a: '0x165D4788242D98786a1db0dA79953d35702eADEd',
+        b: '0xD6AE78Fd3E022AC6Bbc0fab385B4CD5924c480f7'
       }
     }
   },

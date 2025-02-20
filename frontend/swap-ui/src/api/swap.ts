@@ -4,7 +4,11 @@ import {
   neonWrapper2Contract
 } from '@neonevm/token-transfer-ethers';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import { createApproveInstruction, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import {
+  createApproveInstruction,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddressSync
+} from '@solana/spl-token';
 import {
   createScheduledNeonEvmMultipleTransaction,
   EstimatedScheduledGasPayData,
@@ -141,7 +145,7 @@ export function pancakeSwapTransaction(index: number, data: SwapTokenCommonData)
   });
 }
 
-export async function transferTokenToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<ScheduledTransaction> {
+export async function transferTokenToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<[ScheduledTransaction, TransactionInstruction]> {
   const {
     transactionGas,
     solanaUser,
@@ -151,7 +155,8 @@ export async function transferTokenToSolanaTransaction(index: number, params: Sw
     nonce,
     chainId,
     provider,
-    pancakePair
+    pancakePair,
+    connection
   } = params;
   const contract = new Contract(tokenTo.address, erc20Abi, provider);
   const balance = await contract.balanceOf(solanaUser.neonWallet);
@@ -159,10 +164,17 @@ export async function transferTokenToSolanaTransaction(index: number, params: Sw
   if (balance > 0n) {
     amount = amount + balance;
   }
-  const ata = getAssociatedTokenAddressSync(new PublicKey(tokenTo.address_spl), solanaUser.publicKey);
+  const tokenMint = new PublicKey(tokenTo.address_spl);
+  const ata = getAssociatedTokenAddressSync(tokenMint, solanaUser.publicKey);
   const transferSolanaData = erc20ForSPLContract().encodeFunctionData('transferSolana', [ata.toBuffer(), amount]);
 
-  return new ScheduledTransaction({
+  const account = await connection.getAccountInfo(ata);
+  let instruction = null;
+  if (!account) {
+    instruction = createAssociatedTokenAccountInstruction(solanaUser.publicKey, ata, solanaUser.publicKey, tokenMint);
+  }
+
+  const scheduledTransaction = new ScheduledTransaction({
     index: index,
     nonce: nonce,
     payer: solanaUser.neonWallet,
@@ -173,6 +185,8 @@ export async function transferTokenToSolanaTransaction(index: number, params: Sw
     maxFeePerGas: transactionGas.maxFeePerGas,
     maxPriorityFeePerGas: transactionGas.maxPriorityFeePerGas
   });
+
+  return [scheduledTransaction, instruction];
 }
 
 export async function transferWNeonToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<ScheduledTransaction[]> {
@@ -201,7 +215,7 @@ export async function approveSwapAndWithdrawTokensMultiple(params: SwapTokenComm
   const [claimTransaction, approveInstruction] = transferTokenToNeonTransaction(0, params);
   const approveSwapTransaction = approveTokensForSwapTransaction(1, params);
   const swapTransaction = pancakeSwapTransaction(2, params);
-  const transferSolanaTransaction = await transferTokenToSolanaTransaction(3, params);
+  const [transferSolanaTransaction, createATAInstruction] = await transferTokenToSolanaTransaction(3, params);
 
   const multiple = new MultipleTransactions(nonce, transactionGas.maxFeePerGas, transactionGas.maxPriorityFeePerGas);
   const transactions: ScheduledTransaction[] = [];
@@ -236,6 +250,10 @@ export async function approveSwapAndWithdrawTokensMultiple(params: SwapTokenComm
   // [0] approve
   scheduledTransaction.instructions.unshift(approveInstruction);
   logJson(transactions.map(d => d.data));
+
+  if (createATAInstruction) {
+    scheduledTransaction.instructions.unshift(createATAInstruction);
+  }
 
   return {
     scheduledTransaction,
@@ -335,7 +353,7 @@ export function approveTokensMultiple(params: SwapTokenCommonData): SwapTokensRe
 export async function withdrawTokensMultiple(params: SwapTokenCommonData): Promise<SwapTokensResponse> {
   const { neonEvmProgram, solanaUser, nonce, chainId, transactionGas } = params;
   // const pancakeTransaction = pancakeSwapTransaction(0, params);
-  const transferSolanaTransaction = await transferTokenToSolanaTransaction(0, params);
+  const [transferSolanaTransaction] = await transferTokenToSolanaTransaction(0, params);
 
   const transactions: ScheduledTransaction[] = [
     transferSolanaTransaction
