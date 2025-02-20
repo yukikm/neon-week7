@@ -46,21 +46,30 @@ async function main() {
   const solanaWallet = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_WALLET));
   await transferSolToMemberWallet(connection, solanaWallet.publicKey, 1);
 
-  await createPoolDeposit(connection);
+  // await createPoolDeposit(connection);
 
   const deployer = (await ethers.getSigners())[0];
   console.log(`Deployer address: ${deployer.address}`);
-  for (const wallet of memberWallets) {
-    const memberWallet = new PublicKey(wallet);
-    await transferSolToMemberWallet(connection, memberWallet, 10);
-    for (const token of addresses.tokens) {
-      if (token.symbol === 'wNEON') {
-        await transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, 10000, addresses.transfer.neonTokenTransfer);
-      } else {
-        await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000);
-      }
+/*  for (const token of addresses.tokens) {
+    if (token.symbol === 'wNEON') {
+      await transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, 10000, addresses.transfer.neonTokenTransfer);
+    } else {
+      await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000);
+    }
+    for (const wallet of memberWallets) {
+      const memberWallet = new PublicKey(wallet);
+      await transferSolToMemberWallet(connection, memberWallet, 10);
       await transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, 100);
       await asyncTimeout(2e3);
+    }
+  }*/
+
+  const contract = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';
+  for (const token of addresses.tokensV2) {
+    await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000, contract);
+    for (const wallet of memberWallets) {
+      const memberWallet = new PublicKey(wallet);
+      await transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, 100);
     }
   }
 }
@@ -178,7 +187,7 @@ async function transferERC20TokenToBankAccount(connection, solanaWallet, deploye
       const result = await deployer.sendTransaction(transaction);
       console.log(`Transfer transaction:`);
       console.log(JSON.stringify(result, null, 2));
-      await result.wait(1e3);
+      await result.wait();
       await asyncTimeout(3e3);
       const { value } = await connection.getTokenAccountBalance(ataSolanaWallet);
       console.log(`Token Account: ${ataSolanaWallet.toBase58()}`);

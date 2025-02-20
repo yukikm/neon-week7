@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import AmountInput from 'react-currency-input-field';
+import { Big } from 'big.js';
 import { CTokenBalance } from '../../../models';
 import { tokenIcons } from '../../../data/tokens';
 import TokensModal from '../TokensModal/TokensModal';
@@ -44,10 +45,6 @@ export const TokenField: React.FC = (props: Props) => {
     return `0`;
   }, [data, tokensList]);
 
-  const tokenName = useMemo(() => {
-    return data.token;
-  }, [data]);
-
   const token = useMemo(() => {
     const symbol = data.token ? data.token : '';
     const id = tokensList.findIndex(i => i.token.symbol === symbol);
@@ -58,13 +55,18 @@ export const TokenField: React.FC = (props: Props) => {
     return null;
   }, [data, tokensList]);
 
+  const tokenName = useMemo(() => {
+    return token?.name;
+  }, [token]);
+
   const handleOpenModal = (): void => {
     setOpenModal(true);
   };
 
   const handleCloseModal = (token?: CTokenBalance): void => {
     if (token) {
-      setTokenData(type, { ...data, token: token.token.symbol });
+      const amount = data.amount ? new Big(new Big(data.amount).toFixed(token.token.decimals)).toString() : '';
+      setTokenData(type, { amount, token: token.token.symbol });
     }
     setOpenModal(false);
   };
@@ -96,7 +98,7 @@ export const TokenField: React.FC = (props: Props) => {
             <div className="token-icon">
               <img src={tokenIcon} width="36px" height="36px" alt="" />
             </div>
-            <span className="token-name">{tokenName}</span>
+            <span className="token-name whitespace-nowrap">{tokenName}</span>
           </button>
         </div>
         <div className="token-field-item amount w-full relative">

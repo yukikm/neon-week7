@@ -2,6 +2,7 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { PublicKey } from '@solana/web3.js';
 import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
+import { SPLToken } from '@neonevm/token-transfer-core';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Big } from 'big.js';
 import { TokenField } from './components/TokenField/TokenField';
@@ -12,15 +13,12 @@ import {
   CTokenBalance,
   FormState,
   PancakePair,
+  SwapTokenCommonData,
   SwapTokensResponse,
   TransactionGas
 } from '../models';
-import {
-  approveSwapAndWithdrawTokensMultiple,
-  estimateSwapAmount,
-  withdrawTokensMultiple
-} from '../api/swap';
-import { swap, tokensList } from '../data/tokens';
+import { estimateSwapAmount } from '../api/swap';
+import { swap } from '../data/tokens';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
 
@@ -33,7 +31,14 @@ const DURATION = 3e5;
 const DELAY = 1e3;
 const MAX_AMOUNT = PROXY_ENV === 'devnet' ? 1 : 10;
 
-export const SwapForm: React.FC = () => {
+interface Props {
+  tokensList: SPLToken[];
+
+  swapMethod(params: SwapTokenCommonData): Promise<SwapTokensResponse>;
+}
+
+export const SwapForm: React.FC = (props: Props) => {
+  const { tokensList, swapMethod } = props;
   const { connected, publicKey } = useWallet();
   const [tokenBalanceList, setTokenBalanceList] = useState<CTokenBalance[]>([]);
   const { connection } = useConnection();
@@ -43,7 +48,6 @@ export const SwapForm: React.FC = () => {
     chainId,
     neonEvmProgram,
     sendTransaction,
-    getWalletBalance,
     provider
   } = useProxyConnection();
   const [one, two] = tokensList;
@@ -70,7 +74,7 @@ export const SwapForm: React.FC = () => {
     const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
     const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
     return [tokenFrom, tokenTo];
-  }, [formData.from.token, formData.to.token]);
+  }, [formData.from.token, formData.to.token, tokensList]);
 
   const pancakePair = useMemo<PancakePair>(() => {
     const [tokenFrom, tokenTo] = tokenFromTo;
@@ -122,7 +126,7 @@ export const SwapForm: React.FC = () => {
     const amountTo = Number(formData.to.amount);
     const pancakeRouter: NeonAddress = swap.router;
 
-    return approveSwapAndWithdrawTokensMultiple({
+    return swapMethod({
       transactionGas,
       nonce,
       proxyApi,
@@ -140,31 +144,7 @@ export const SwapForm: React.FC = () => {
     });
   };
 
-  const withdrawTokens = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
-    const [tokenFrom, tokenTo] = tokenFromTo;
-    const amountFrom = Number(formData.from.amount);
-    const amountTo = Number(formData.to.amount);
-    const pancakeRouter: NeonAddress = swap.router;
-
-    return withdrawTokensMultiple({
-      transactionGas,
-      nonce,
-      proxyApi,
-      provider,
-      connection,
-      solanaUser,
-      neonEvmProgram,
-      tokenFrom,
-      tokenTo,
-      amountFrom,
-      amountTo,
-      pancakePair,
-      pancakeRouter,
-      chainId
-    });
-  };
-
-  const cancelTransaction = async (status: ScheduledTransactionStatus) => {
+  const cancelTransaction = async (_: ScheduledTransactionStatus) => {
     const { result } = await proxyApi.getPendingTransactions(solanaUser.publicKey);
     console.log(result);
   };
@@ -181,7 +161,7 @@ export const SwapForm: React.FC = () => {
         gasLimit: [1e7, 1e7, 1e7] // 10_000_000
       });
       changeTransactionStates(state);
-      const signature = await sendTransaction(scheduledTransaction);
+      const signature = await sendTransaction(scheduledTransaction, 'confirmed', { skipPreflight: true });
       if (signature) {
         state.signature = signature;
         changeTransactionStates(state);
@@ -236,16 +216,7 @@ export const SwapForm: React.FC = () => {
         method: approveAndSwap,
         data: undefined
       };
-      // const swapState: FormState = {
-      //   id: 1,
-      //   title: `Withdraw tokens to Solana wallet`,
-      //   status: `NotStarted`,
-      //   signature: ``,
-      //   isCompleted: false,
-      //   method: withdrawTokens,
-      //   data: undefined
-      // };
-      transactionsRef.current = [approveSwapAndWithdraw/*, swapState*/];
+      transactionsRef.current = [approveSwapAndWithdraw];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
       setLoading(false);
@@ -268,7 +239,6 @@ export const SwapForm: React.FC = () => {
     setFormData({ from: to, to: from });
     setError('');
     resetTransactionStates();
-    console.log(JSON.stringify(formData));
   };
 
   const handleTokenData = (type: 'from' | 'to', value: {
@@ -305,7 +275,6 @@ export const SwapForm: React.FC = () => {
     };
 
     getBalance().catch(console.log);
-    getWalletBalance().catch(console.log);
   }, [publicKey, loading]);
 
   useEffect(() => {
@@ -334,17 +303,7 @@ export const SwapForm: React.FC = () => {
   }, [formData.from.amount, tokenFromTo, provider, pancakePair]);
 
   return (
-    <div className="max-w-[624px]">
-      <div className="form-group">
-        <div className="form-label !mb-[10px]">
-          <label>Contract version</label>
-        </div>
-        <div className="button-group">
-          <button type="button" className="button active">v1</button>
-          <button type="button" className="button" disabled>v1~v2</button>
-          <button type="button" className="button" disabled>v2</button>
-        </div>
-      </div>
+    <>
       <div className="form-group">
         <div className="form-field">
           <TokenField data={formData.from} tokensList={tokenBalanceList}
@@ -387,7 +346,7 @@ export const SwapForm: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

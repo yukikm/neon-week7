@@ -28,7 +28,7 @@ async function airdropNEON(address, amount) {
     body: JSON.stringify({ 'amount': amount, 'wallet': address }),
     headers: { 'Content-Type': 'application/json' }
   });
-  console.log('\nAirdropping ' + ethers.formatUnits(amount.toString(), 0) + ' NEON to ' + address);
+  console.log(`\nAirdropping ${ethers.formatUnits(amount.toString(), 0)} NEON to ${address}`);
   await asyncTimeout(3000);
 }
 

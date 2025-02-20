@@ -11,7 +11,7 @@ import {
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
 import { JsonRpcProvider } from 'ethers';
-import { NEON_CORE_API_RPC_URL, SOLANA_URL } from '../environments';
+import { NEON_CORE_API_RPC_URL, PROXY_ENV, SOLANA_URL } from '../environments';
 import { simulateTransaction } from '../utils/solana.ts';
 import { Props } from '../models';
 
@@ -57,8 +57,9 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
 
   const sendTransaction = async (transaction: Transaction, commitment: Commitment = 'confirmed', options?: SendOptions): Promise<string | undefined> => {
     if (signTransaction) {
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash(commitment);
       transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = solanaUser.publicKey;
       const { value } = await simulateTransaction(connection, transaction, commitment);
       logJson(value.err);
@@ -66,8 +67,15 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
       const signedTransaction = await signTransaction(transaction);
       solanaTransactionLog(transaction);
       const signature = await connection.sendRawTransaction(signedTransaction.serialize(), options);
-      // await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, commitment);
-      await delay(5e3);
+      if (PROXY_ENV === 'devnet') {
+        await connection.confirmTransaction({
+          blockhash,
+          lastValidBlockHeight,
+          signature
+        }, commitment);
+      } else {
+        await delay(5e3);
+      }
       console.log(`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=${SOLANA_URL}`);
       return signature;
     }

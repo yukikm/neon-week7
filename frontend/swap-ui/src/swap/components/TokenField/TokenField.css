@@ -9,7 +9,7 @@
 }
 
 .token-field {
-  @apply flex flex-row justify-between w-full;
+  @apply flex flex-row justify-between items-center w-full;
 }
 
 .token-icon {

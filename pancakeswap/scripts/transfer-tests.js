@@ -188,5 +188,3 @@ async function wrappingSol() {
 
   await sendSolanaTransaction(connection, transaction, [solanaWallet]);
 }
-
-main();

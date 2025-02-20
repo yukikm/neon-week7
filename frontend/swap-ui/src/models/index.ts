@@ -32,20 +32,6 @@ export interface TransactionGas {
   maxPriorityFeePerGas: number;
 }
 
-export interface SwapTokenMultipleData {
-  proxyApi: NeonProxyRpcApi;
-  solanaUser: SolanaNeonAccount;
-  neonEvmProgram: PublicKey;
-  tokenFrom: CSPLToken;
-  tokenTo: CSPLToken;
-  pairAddress: NeonAddress;
-  pancakeRouter: NeonAddress;
-  chainId: number;
-  amountFrom: number;
-  amountTo: number;
-  nonce: number;
-}
-
 export interface SwapTokenCommonData {
   transactionGas: TransactionGas;
   proxyApi: NeonProxyRpcApi;
@@ -79,42 +65,14 @@ export interface FormState {
   data?: ScheduledTreeAccount;
 }
 
-export interface TransferTokenData {
-  proxyApi: NeonProxyRpcApi;
-  solanaUser: SolanaNeonAccount;
-  neonEvmProgram: PublicKey;
-  token: CSPLToken;
-  chainId: number;
-  amount: number;
-  nonce: number;
-}
-
-export interface TransferTokenToSolanaData {
-  proxyApi: NeonProxyRpcApi;
-  provider: JsonRpcProvider;
-  solanaUser: SolanaNeonAccount;
-  neonEvmProgram: PublicKey;
-  token: CSPLToken;
-  chainId: number;
-  nonce: number;
-}
-
-
-export interface SwapTokensData {
-  proxyApi: NeonProxyRpcApi;
-  solanaUser: SolanaNeonAccount;
-  neonEvmProgram: PublicKey;
-  tokenFrom: CSPLToken;
-  tokenTo: CSPLToken;
-  pancakeRouter: NeonAddress;
-  pancakePair?: NeonAddress;
-  chainId: number;
-  amount: number;
-  nonce: number;
-}
-
 export interface PancakePair {
   pair: NeonAddress;
   a: NeonAddress;
   b: NeonAddress;
+}
+
+export interface UITab {
+  id: number;
+  title: string;
+  disabled: boolean;
 }

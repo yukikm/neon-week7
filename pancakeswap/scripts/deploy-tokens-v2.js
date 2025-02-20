@@ -1,8 +1,7 @@
 const { ethers, network, run } = require('hardhat');
-const { default: bs58 } = require('bs58');
-const config = require('../config');
 const { airdropNEON, writeToFile } = require('./utils');
 const { createPairAndAddLiquidity } = require('./create-liquidity-pools');
+const { deployERC20ForSPLMintable } = require('./deploy-tokens');
 const { addresses } = require('../artifacts/addresses');
 
 async function main() {
@@ -31,7 +30,7 @@ async function main() {
   const mintAuthority = deployer.address; // Set deployer as mint authority
   const contract = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';
 
-  const tokenA = await deployERC20ForSPLV2Mintable(
+  const tokenAv2 = await deployERC20ForSPLMintable(
     'token_Av2',
     'Token A (v2)',
     'TOKEN_Av2',
@@ -40,7 +39,7 @@ async function main() {
     contract
   );
 
-  const tokenB = await deployERC20ForSPLV2Mintable(
+  const tokenBv2 = await deployERC20ForSPLMintable(
     'token_Bv2',
     'Token B (v2)',
     'TOKEN_Bv2',
@@ -57,23 +56,23 @@ async function main() {
     pancakeFactoryAddress,
     pancakeRouterAddress,
     deployer,
-    tokenA.address,
-    tokenB.address,
+    tokenAv2.address,
+    tokenBv2.address,
     30000,
     65000,
     contract
   );
 
-  const aSymbol = tokenA.symbol.toLowerCase();
-  const bSymbol = tokenB.symbol.toLowerCase();
+  const a2Symbol = tokenAv2.symbol.toLowerCase();
+  const b2Symbol = tokenBv2.symbol.toLowerCase();
 
   const result = { ...addresses };
-  result.tokensV2 = [tokenA, tokenB];
+  result.tokensV2 = [tokenAv2, tokenBv2];
   result.swap.pairs = {
     ...result.swap.pairs,
-    [`${aSymbol}/${bSymbol}`]: pairAddressAB,
-    [`${bSymbol}/${aSymbol}`]: pairAddressAB
-  }
+    [`${a2Symbol}/${b2Symbol}`]: pairAddressAB,
+    [`${b2Symbol}/${a2Symbol}`]: pairAddressAB
+  };
 
   const json = JSON.stringify(result, null, 2);
   console.log(json);
@@ -83,61 +82,9 @@ async function main() {
   console.log('\n');
 }
 
-async function deployERC20ForSPLV2Mintable(
-  tokenKey,
-  name,
-  symbol,
-  decimals,
-  mintAuthority,
-  contract
-) {
-  const ERC20ForSPLMintableContractFactory = await ethers.getContractFactory(contract);
-  let token;
-  if (!config[tokenKey][network.name]) {
-    console.log(`\nDeploying ERC20ForSPLMintable contract to ${network.name}...`);
-    token = await ERC20ForSPLMintableContractFactory.deploy(
-      name,
-      symbol,
-      decimals,
-      mintAuthority
-    );
-    await token.waitForDeployment();
-    console.log(`ERC20ForSPLMintable contract deployed to: ${token.target}`);
-  } else {
-    console.log(`\nERC20ForSPLMintable contract already deployed to: ${config[tokenKey][network.name]}`);
-    token = ERC20ForSPLMintableContractFactory.attach(config[tokenKey][network.name]);
-  }
-
-  const tokenAddress = token.target;
-  const tokenName = await token.name();
-  const tokenSymbol = await token.symbol();
-  const tokenDecimals = await token.decimals();
-  const tokenMint = await token.tokenMint();
-  const address_spl = bs58.encode(ethers.getBytes(tokenMint));
-
-  console.log(`\nToken address: ${tokenAddress}`);
-  console.log(`Token spl address: ${address_spl}`);
-  console.log(`Token name: ${tokenName}`);
-  console.log(`Token symbol: ${tokenSymbol}`);
-  console.log(`Token decimals: ${tokenDecimals}`);
-  console.log(`Token mint authority: ${mintAuthority}`);
-
-  return {
-    address: tokenAddress,
-    address_spl: address_spl,
-    name: tokenName,
-    symbol: tokenSymbol,
-    decimals: Number(tokenDecimals)
-  };
-}
-
 main()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);
     process.exit(1);
   });
-
-module.exports = {
-  deployERC20ForSPLV2Mintable
-};

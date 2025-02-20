@@ -52,13 +52,13 @@ async function deployERC20ForSPLMintable(
   name,
   symbol,
   decimals,
-  mintAuthority
+  mintAuthority,
+  contract = 'ERC20ForSplMintable'
 ) {
-  const ERC20ForSPLMintableContractFactory = await ethers.getContractFactory('ERC20ForSplMintable');
-
+  const ERC20ForSPLMintableContractFactory = await ethers.getContractFactory(contract);
   let token;
   if (!config[tokenKey][network.name]) {
-    console.log('\nDeploying ERC20ForSPLMintable contract to ' + network.name + '...');
+    console.log(`\nDeploying ERC20ForSPLMintable contract to ${network.name}...`);
     token = await ERC20ForSPLMintableContractFactory.deploy(
       name,
       symbol,
@@ -66,9 +66,9 @@ async function deployERC20ForSPLMintable(
       mintAuthority
     );
     await token.waitForDeployment();
-    console.log('ERC20ForSPLMintable contract deployed to: ' + token.target);
+    console.log(`ERC20ForSPLMintable contract deployed to: ${token.target}`);
   } else {
-    console.log('\nERC20ForSPLMintable contract already deployed to: ' + config[tokenKey][network.name]);
+    console.log(`\nERC20ForSPLMintable contract already deployed to: ${config[tokenKey][network.name]}`);
     token = ERC20ForSPLMintableContractFactory.attach(config[tokenKey][network.name]);
   }
 
@@ -79,12 +79,12 @@ async function deployERC20ForSPLMintable(
   const tokenMint = await token.tokenMint();
   const address_spl = bs58.encode(ethers.getBytes(tokenMint));
 
-  console.log('\nToken address: ' + tokenAddress);
-  console.log('Token spl address: ' + address_spl);
-  console.log('Token name: ' + tokenName);
-  console.log('Token symbol: ' + tokenSymbol);
-  console.log('Token decimals: ' + tokenDecimals);
-  console.log('Token mint authority: ' + mintAuthority);
+  console.log(`\nToken address: ${tokenAddress}`);
+  console.log(`Token spl address: ${address_spl}`);
+  console.log(`Token name: ${tokenName}`);
+  console.log(`Token symbol: ${tokenSymbol}`);
+  console.log(`Token decimals: ${tokenDecimals}`);
+  console.log(`Token mint authority: ${mintAuthority}`);
 
   return {
     address: tokenAddress,

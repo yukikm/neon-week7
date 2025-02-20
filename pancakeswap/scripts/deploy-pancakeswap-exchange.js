@@ -45,7 +45,7 @@ async function deployPancakeswapExchange(deployer) {
     NEONAddress = neonToken.target;
     token = {
       address: WNEON.target,
-      // hardcoded NEON Mint
+      // hardcoded NEON Mint (curvestand)
       address_spl: `HPsV9Deocecw3GeZv1FkAPNCBRfuVyfw9MMwjwRe1xaU`,
       name: 'Wrapped NEON',
       symbol: 'wNEON',
