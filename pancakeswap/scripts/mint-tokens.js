@@ -7,7 +7,7 @@ const {
   transferSolToMemberWallet,
   transferNeonTokenToBankAccount,
   transferERC20TokenToBankAccount,
-  transferTokenToMemberWallet
+  transferTokenToMemberWallet, deployerAirdrop
 } = require('./utils');
 const { addresses } = require('../artifacts/addresses');
 require('dotenv').config();
@@ -32,16 +32,19 @@ async function main() {
   const connection = new Connection(solanaUrl);
   const solanaWallet = Keypair.fromSecretKey(bs58.decode(process.env.SOLANA_WALLET));
   await transferSolToMemberWallet(connection, solanaWallet.publicKey, 1);
+  const contractV1 = 'contracts/erc20-for-spl/ERC20ForSPL.sol:ERC20ForSplMintable';
+  const contractV2 = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';
 
-  await createPoolDeposit(connection);
+  // await createPoolDeposit(connection);
 
   const deployer = (await ethers.getSigners())[0];
-  console.log(`Deployer address: ${deployer.address}`);
-  for (const token of addresses.tokens) {
+  await deployerAirdrop(deployer, 10000);
+
+  for (const token of addresses.tokensV1) {
     if (token.symbol === 'wNEON') {
-      await transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, 10000, addresses.transfer.neonTokenTransfer);
+      await transferNeonTokenToBankAccount(connection, solanaWallet, deployer, token, 1000, addresses.swap.neonTokenTransfer);
     } else {
-      await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000);
+      await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000, contractV1);
     }
     for (const wallet of memberWallets) {
       const memberWallet = new PublicKey(wallet);
@@ -51,9 +54,8 @@ async function main() {
     }
   }
 
-  const contract = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';
   for (const token of addresses.tokensV2) {
-    await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000, contract);
+    await transferERC20TokenToBankAccount(connection, solanaWallet, deployer, token, 10000, contractV2);
     for (const wallet of memberWallets) {
       const memberWallet = new PublicKey(wallet);
       await transferTokenToMemberWallet(connection, solanaWallet, memberWallet, token, 100);

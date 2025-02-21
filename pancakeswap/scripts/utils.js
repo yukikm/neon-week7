@@ -110,6 +110,7 @@ async function transferNeonTokenToBankAccount(connection, solanaWallet, deployer
   console.log(`Balance: ${value.uiAmountString} ${token.symbol}`);
   if (ethers.parseUnits(amount.toString(), 9) > BigInt(value.amount)) {
     const balance = await tokenContract.balanceOf(deployer.address);
+    console.log(fullAmount, balance);
     if (fullAmount > balance) {
       console.log(`Mint ${amount} ${token.symbol}`);
       // await tokenContract.mint(deployer.address, fullAmount);
@@ -117,7 +118,7 @@ async function transferNeonTokenToBankAccount(connection, solanaWallet, deployer
       await asyncTimeout(5e3);
       const balance = await tokenContract.balanceOf(deployer.address);
       console.log(`Deployer ${deployer.address}`);
-      console.log(`Balance ${new Big(balance.toString()).div(10 ** 18)} ${token.symbol}`);
+      console.log(`Balance ${new Big(balance.toString()).div(10 ** 18).toString()} ${token.symbol}`);
     }
     try {
       console.log(`Transfer ${amount} ${token.symbol} to ${solanaWallet.publicKey.toBase58()} wallet`);
@@ -199,6 +200,18 @@ async function transferERC20TokenToBankAccount(connection, solanaWallet, deploye
   }
 }
 
+async function deployerAirdrop(deployer, amount) {
+  console.log(`\nDeployer address: ${deployer.address}`);
+
+  let deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
+  const minBalance = ethers.parseUnits(amount.toString(), 18); // 10000 NEON
+  if (deployerBalance < minBalance && parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)) > 0) {
+    await airdropNEON(deployer.address, parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)));
+    deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
+  }
+  console.log(`\nDeployer balance: ${ethers.formatUnits(deployerBalance.toString(), 18)} NEON`);
+}
+
 function writeToFile(fileName, data, distPath = 'artifacts') {
   try {
     const root = process.cwd();
@@ -214,6 +227,7 @@ function writeToFile(fileName, data, distPath = 'artifacts') {
 module.exports = {
   asyncTimeout,
   airdropNEON,
+  deployerAirdrop,
   sendSolanaTransaction,
   transferSolToMemberWallet,
   createAssociatedTokenAccount,
