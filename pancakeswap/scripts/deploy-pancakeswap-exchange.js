@@ -1,5 +1,5 @@
 const { ethers, network, run } = require('hardhat');
-const { airdropNEON } = require('./utils');
+const { deployerAirdrop } = require('./utils');
 const config = require('../config');
 
 async function main() {
@@ -12,18 +12,7 @@ async function main() {
   }
 
   const deployer = (await ethers.getSigners())[0];
-  console.log('\nDeployer address: ' + deployer.address);
-
-  let deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  const minBalance = ethers.parseUnits('10000', 18); // 10000 NEON
-  if (
-    deployerBalance < minBalance &&
-    parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)) > 0
-  ) {
-    await airdropNEON(deployer.address, parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)));
-    deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  }
-  console.log('\nDeployer balance: ' + ethers.formatUnits(deployerBalance.toString(), 18) + ' NEON');
+  await deployerAirdrop(deployer, 10000);
 
   await deployPancakeswapExchange(deployer);
 }
@@ -50,7 +39,7 @@ async function deployPancakeswapExchange(deployer) {
       name: 'Wrapped NEON',
       symbol: 'wNEON',
       decimals: 18
-    }
+    };
   } else {
     console.log('\nWNEON contract already deployed to: ' + config.WNEON[network.name]);
     WNEONAddress = config.WNEON[network.name];

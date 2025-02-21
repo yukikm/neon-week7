@@ -1,6 +1,6 @@
 const { ethers, network, run } = require('hardhat');
 const config = require('../config');
-const { asyncTimeout, airdropNEON } = require('./utils');
+const { asyncTimeout, deployerAirdrop } = require('./utils');
 
 async function main() {
   await run('compile');
@@ -12,18 +12,7 @@ async function main() {
   }
 
   const deployer = (await ethers.getSigners())[0];
-  console.log('\nDeployer address: ' + deployer.address);
-
-  let deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  const minBalance = ethers.parseUnits('10000', 18); // 10000 NEON
-  if (
-    deployerBalance < minBalance &&
-    parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)) > 0
-  ) {
-    await airdropNEON(deployer.address, parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)));
-    deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  }
-  console.log('\nDeployer balance: ' + ethers.formatUnits(deployerBalance.toString(), 18) + ' NEON');
+  await deployerAirdrop(deployer, 10000);
 
   if (config.pancakeFactory[network.name] && config.pancakeRouter[network.name]) {
     console.log('\nPancakeFactory contract address:' + config.pancakeFactory[network.name]);

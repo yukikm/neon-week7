@@ -299,6 +299,8 @@ export const SwapForm: React.FC = (props: Props) => {
       }).then(() => delay(300)).then(() => {
         setFieldLoading(false);
       });
+    } else {
+      handleTokenData('to', { token: formData.to.token, amount: '' });
     }
   }, [formData.from.amount, tokenFromTo, provider, pancakePair]);
 

@@ -1,5 +1,5 @@
 const { ethers, network, run } = require('hardhat');
-const { airdropNEON, writeToFile } = require('./utils');
+const { writeToFile, deployerAirdrop } = require('./utils');
 const { createPairAndAddLiquidity } = require('./create-liquidity-pools');
 const { deployERC20ForSPLMintable } = require('./deploy-tokens');
 const { addresses } = require('../artifacts/addresses');
@@ -14,18 +14,7 @@ async function main() {
   }
 
   const deployer = (await ethers.getSigners())[0];
-  console.log(`\nDeployer address: ${deployer.address}`);
-
-  let deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  const minBalance = ethers.parseUnits('10000', 18); // 10000 NEON
-  if (
-    deployerBalance < minBalance &&
-    parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)) > 0
-  ) {
-    await airdropNEON(deployer.address, parseInt(ethers.formatUnits((minBalance - deployerBalance).toString(), 18)));
-    deployerBalance = BigInt(await ethers.provider.getBalance(deployer.address));
-  }
-  console.log(`\nDeployer balance: ${ethers.formatUnits(deployerBalance.toString(), 18)} NEON`);
+  await deployerAirdrop(deployer, 10000);
 
   const mintAuthority = deployer.address; // Set deployer as mint authority
   const contract = 'contracts/erc20-for-spl-v2/token/ERC20ForSpl/erc20_for_spl.sol:ERC20ForSplMintable';

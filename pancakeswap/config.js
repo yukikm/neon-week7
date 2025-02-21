@@ -25,12 +25,12 @@ module.exports = {
     neonmainnet: ''
   },
   token_Av2: {
-    curvestand: '0x60e1D2e0f8950ca9b955fd89791B886C09539633',
+    curvestand: '',
     neondevnet: '',
     neonmainnet: ''
   },
   token_Bv2: {
-    curvestand: '0x2D6970930469599Cbb69cF59eDBab2B70fe948dB',
+    curvestand: '',
     neondevnet: '',
     neonmainnet: ''
   }
