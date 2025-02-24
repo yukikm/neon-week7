@@ -3,7 +3,7 @@ import {
   erc20ForSPLContract,
   neonWrapper2Contract
 } from '@neonevm/token-transfer-ethers';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import {
   createApproveInstruction,
   createAssociatedTokenAccountInstruction,
@@ -19,7 +19,8 @@ import {
   MultipleTransactions,
   NeonProxyRpcApi,
   NO_CHILD_INDEX,
-  ScheduledTransaction
+  ScheduledTransaction,
+  SolanaNeonAccount
 } from '@neonevm/solana-sign';
 import {
   authAccountAddress,
@@ -145,6 +146,18 @@ export function pancakeSwapTransaction(index: number, data: SwapTokenCommonData)
   });
 }
 
+export async function createATAInstruction(connection: Connection, solanaUser: SolanaNeonAccount, token: SPLToken): Promise<TransactionInstruction> {
+  const tokenMint = new PublicKey(token.address_spl);
+  const ata = getAssociatedTokenAddressSync(tokenMint, solanaUser.publicKey);
+
+  const account = await connection.getAccountInfo(ata);
+  let instruction = null;
+  if (!account) {
+    instruction = createAssociatedTokenAccountInstruction(solanaUser.publicKey, ata, solanaUser.publicKey, tokenMint);
+  }
+  return instruction;
+}
+
 export async function transferTokenToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<[ScheduledTransaction, TransactionInstruction]> {
   const {
     transactionGas,
@@ -167,12 +180,7 @@ export async function transferTokenToSolanaTransaction(index: number, params: Sw
   const tokenMint = new PublicKey(tokenTo.address_spl);
   const ata = getAssociatedTokenAddressSync(tokenMint, solanaUser.publicKey);
   const transferSolanaData = erc20ForSPLContract().encodeFunctionData('transferSolana', [ata.toBuffer(), amount]);
-
-  const account = await connection.getAccountInfo(ata);
-  let instruction = null;
-  if (!account) {
-    instruction = createAssociatedTokenAccountInstruction(solanaUser.publicKey, ata, solanaUser.publicKey, tokenMint);
-  }
+  const instruction = await createATAInstruction(connection, solanaUser, tokenTo);
 
   const scheduledTransaction = new ScheduledTransaction({
     index: index,
@@ -262,7 +270,15 @@ export async function approveSwapAndWithdrawTokensMultiple(params: SwapTokenComm
 }
 
 export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise<SwapTokensResponse> {
-  const { neonEvmProgram, solanaUser, nonce, chainId, transactionGas } = params;
+  const {
+    neonEvmProgram,
+    solanaUser,
+    nonce,
+    chainId,
+    transactionGas,
+    connection,
+    tokenTo
+  } = params;
   const [claimTransaction, approveInstruction] = transferTokenToNeonTransaction(0, params);
   const approveSwapTransaction = approveTokensForSwapTransaction(1, params);
   const swapTransaction = pancakeSwapTransaction(2, params);
@@ -298,8 +314,15 @@ export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise
     neonWalletNonce: nonce
   });
 
-  // [0] approve
+  // [0?] approve
   scheduledTransaction.instructions.unshift(approveInstruction);
+
+  // [0] create ata
+  const instruction = await createATAInstruction(connection, solanaUser, tokenTo);
+  if (instruction) {
+    scheduledTransaction.instructions.unshift(instruction);
+  }
+
   logJson(transactions.map(d => d.data));
 
   return {
