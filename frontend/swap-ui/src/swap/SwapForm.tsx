@@ -29,7 +29,7 @@ interface FormData {
 
 const DURATION = 3e5;
 const DELAY = 1e3;
-const MAX_AMOUNT = PROXY_ENV === 'devnet' ? 1 : 10;
+const MAX_AMOUNT = PROXY_ENV === 'devnet' ? 10 : 20;
 
 interface Props {
   tokensList: SPLToken[];
