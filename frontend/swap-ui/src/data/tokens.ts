@@ -1,6 +1,5 @@
-import { addressesCurvestand } from './addresses.curvestand.ts';
-import { addressesDevnet } from './addresses.devnet.ts';
-import { PROXY_ENV } from '../environments';
+import { addressesCurvestand } from './addresses.curvestand';
+import { addressesDevnet } from './addresses.devnet';
 import { CSPLToken } from '../models';
 
 export const tokenIcons: Record<string, string> = {
@@ -13,12 +12,12 @@ export const tokenIcons: Record<string, string> = {
   wneon: 'wneon.svg'
 };
 
-function data() {
-  let swap: unknown = addressesCurvestand.swap;
+export function tokens(env: string): { swap: any, tokensV1: CSPLToken[], tokensV2: CSPLToken[] } {
+  let swap: any = addressesCurvestand.swap;
   let tokensV1: CSPLToken[] = addressesCurvestand.tokensV1;
   let tokensV2: CSPLToken[] = addressesCurvestand.tokensV2;
 
-  if (PROXY_ENV === 'devnet') {
+  if (env === 'devnet') {
     swap = addressesDevnet.swap;
     tokensV1 = addressesDevnet.tokensV1;
     tokensV2 = addressesDevnet.tokensV2;
@@ -26,11 +25,3 @@ function data() {
 
   return { swap, tokensV1, tokensV2 };
 }
-
-const { swap, tokensV1, tokensV2 } = data();
-
-export {
-  swap,
-  tokensV1,
-  tokensV2
-};

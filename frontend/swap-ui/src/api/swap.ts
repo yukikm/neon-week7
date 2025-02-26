@@ -16,8 +16,9 @@ import {
   logJson,
   MAX_FEE_PER_GAS_DEFAULT,
   MAX_PRIORITY_FEE_PER_GAS_DEFAULT,
-  MultipleTransactions,
+  MultipleTransactions, NeonAddress,
   NeonProxyRpcApi,
+  neonWalletProgramAddress,
   NO_CHILD_INDEX,
   ScheduledTransaction,
   SolanaNeonAccount
@@ -39,8 +40,7 @@ import {
   TransactionGas
 } from '../models';
 import { Big } from 'big.js';
-import { swap } from '../data/tokens.ts';
-import { pancakeSwapPairAbi } from '../data/pancakeSwapPair.ts';
+import { pancakeSwapPairAbi } from '../data/pancakeSwapPair';
 
 export async function estimateScheduledGas(proxyApi: NeonProxyRpcApi, data: EstimatedScheduledGasPayData): Promise<TransactionGas> {
   let maxFeePerGas = MAX_FEE_PER_GAS_DEFAULT;
@@ -146,7 +146,7 @@ export function pancakeSwapTransaction(index: number, data: SwapTokenCommonData)
   });
 }
 
-export async function createATAInstruction(connection: Connection, solanaUser: SolanaNeonAccount, token: SPLToken): Promise<TransactionInstruction> {
+export async function createATAInstruction(connection: Connection, solanaUser: SolanaNeonAccount, token: CSPLToken): Promise<TransactionInstruction | null> {
   const tokenMint = new PublicKey(token.address_spl);
   const ata = getAssociatedTokenAddressSync(tokenMint, solanaUser.publicKey);
 
@@ -158,7 +158,7 @@ export async function createATAInstruction(connection: Connection, solanaUser: S
   return instruction;
 }
 
-export async function transferTokenToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<[ScheduledTransaction, TransactionInstruction]> {
+export async function transferTokenToSolanaTransaction(index: number, params: SwapTokenCommonData): Promise<[ScheduledTransaction, TransactionInstruction | null]> {
   const {
     transactionGas,
     solanaUser,
@@ -169,12 +169,13 @@ export async function transferTokenToSolanaTransaction(index: number, params: Sw
     chainId,
     provider,
     pancakePair,
+    pancakeRouter,
     connection
   } = params;
   const contract = new Contract(tokenTo.address, erc20Abi, provider);
   const balance = await contract.balanceOf(solanaUser.neonWallet);
-  let amount = await estimateSwapAmount(provider, [tokenFrom, tokenTo], amountFrom.toString(), pancakePair);
-  if (balance > 0n) {
+  let amount = await estimateSwapAmount(provider, [tokenFrom, tokenTo], amountFrom.toString(), pancakeRouter, pancakePair);
+  if (balance > BigInt(0)) {
     amount = amount + balance;
   }
   const tokenMint = new PublicKey(tokenTo.address_spl);
@@ -269,6 +270,13 @@ export async function approveSwapAndWithdrawTokensMultiple(params: SwapTokenComm
   };
 }
 
+export function approveTokenPDAInstruction(solanaUser: SolanaNeonAccount, neonEvmProgram: PublicKey, token: CSPLToken, amount: number): TransactionInstruction {
+  const fullAmount = toFullAmount(amount, token.decimals);
+  const tokenATA = getAssociatedTokenAddressSync(new PublicKey(token.address_spl), solanaUser.publicKey);
+  const [delegatePDA] = neonWalletProgramAddress(token.address, neonEvmProgram);
+  return createApproveInstruction(tokenATA, delegatePDA, solanaUser.publicKey, fullAmount);
+}
+
 export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise<SwapTokensResponse> {
   const {
     neonEvmProgram,
@@ -277,31 +285,23 @@ export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise
     chainId,
     transactionGas,
     connection,
+    tokenFrom,
+    amountFrom,
     tokenTo
   } = params;
-  const [claimTransaction, approveInstruction] = transferTokenToNeonTransaction(0, params);
-  const approveSwapTransaction = approveTokensForSwapTransaction(1, params);
-  const swapTransaction = pancakeSwapTransaction(2, params);
-  // const transferSolanaTransaction = await transferTokenToSolanaTransaction(3, params);
+  const approveSwapTransaction = approveTokensForSwapTransaction(0, params);
+  const swapTransaction = pancakeSwapTransaction(1, params);
 
   const multiple = new MultipleTransactions(nonce, transactionGas.maxFeePerGas, transactionGas.maxPriorityFeePerGas);
   const transactions: ScheduledTransaction[] = [];
 
-  // Approve clime to trx
-  multiple.addTransaction(claimTransaction, 1, 0);
-  transactions.push(claimTransaction);
-
   // Approve swap trx
-  multiple.addTransaction(approveSwapTransaction, 2, 1);
+  multiple.addTransaction(approveSwapTransaction, 1, 0);
   transactions.push(approveSwapTransaction);
 
   // Pancake Swap trx
   multiple.addTransaction(swapTransaction, NO_CHILD_INDEX, 1);
   transactions.push(swapTransaction);
-
-  // Transfer to Solana trx
-  // multiple.addTransaction(transferSolanaTransaction, NO_CHILD_INDEX, 1);
-  // transactions.push(transferSolanaTransaction);
 
   // [1] scheduled trxs
   const scheduledTransaction = createScheduledNeonEvmMultipleTransaction({
@@ -315,6 +315,7 @@ export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise
   });
 
   // [0?] approve
+  const approveInstruction = approveTokenPDAInstruction(solanaUser, neonEvmProgram, tokenFrom, amountFrom);
   scheduledTransaction.instructions.unshift(approveInstruction);
 
   // [0] create ata
@@ -331,79 +332,11 @@ export async function swapTokensMultipleV2(params: SwapTokenCommonData): Promise
   };
 }
 
-export function approveTokensMultiple(params: SwapTokenCommonData): SwapTokensResponse {
-  const { neonEvmProgram, solanaUser, nonce, chainId, transactionGas } = params;
-  const [claimTransaction, approveInstruction] = transferTokenToNeonTransaction(0, params);
-  const approveSwapTransaction = approveTokensForSwapTransaction(1, params);
-  const swapTransaction = pancakeSwapTransaction(2, params);
-
-  const multiple = new MultipleTransactions(nonce, transactionGas.maxFeePerGas, transactionGas.maxPriorityFeePerGas);
-  const transactions: ScheduledTransaction[] = [];
-
-  // Approve clime to trx
-  multiple.addTransaction(claimTransaction, 1, 0);
-  transactions.push(claimTransaction);
-
-  // Approve swap trx
-  multiple.addTransaction(approveSwapTransaction, 2, 1);
-  transactions.push(approveSwapTransaction);
-
-  // Pancake Swap trx
-  multiple.addTransaction(swapTransaction, NO_CHILD_INDEX, 1);
-  transactions.push(swapTransaction);
-
-  // [1] scheduled trxs
-  const scheduledTransaction = createScheduledNeonEvmMultipleTransaction({
-    chainId: chainId,
-    neonEvmProgram: neonEvmProgram,
-    neonTransaction: multiple.data,
-    signerAddress: solanaUser.publicKey,
-    tokenMintAddress: solanaUser.tokenMint,
-    neonWallet: solanaUser.neonWallet,
-    neonWalletNonce: nonce
-  });
-
-  // [0] approve
-  scheduledTransaction.instructions.unshift(approveInstruction);
-  logJson(transactions.map(d => d.data));
-
-  return {
-    scheduledTransaction,
-    transactions
-  };
-}
-
-export async function withdrawTokensMultiple(params: SwapTokenCommonData): Promise<SwapTokensResponse> {
-  const { neonEvmProgram, solanaUser, nonce, chainId, transactionGas } = params;
-  // const pancakeTransaction = pancakeSwapTransaction(0, params);
-  const [transferSolanaTransaction] = await transferTokenToSolanaTransaction(0, params);
-
-  const transactions: ScheduledTransaction[] = [
-    transferSolanaTransaction
-  ];
-
-  const multiple = new MultipleTransactions(nonce, transactionGas.maxFeePerGas, transactionGas.maxPriorityFeePerGas);
-  // multiple.addTransaction(pancakeTransaction, 1, 0);
-  multiple.addTransaction(transferSolanaTransaction, NO_CHILD_INDEX, 0);
-
-  const scheduledTransaction = createScheduledNeonEvmMultipleTransaction({
-    chainId: chainId,
-    neonEvmProgram: neonEvmProgram,
-    neonTransaction: multiple.data,
-    signerAddress: solanaUser.publicKey,
-    tokenMintAddress: solanaUser.tokenMint,
-    neonWallet: solanaUser.neonWallet,
-    neonWalletNonce: nonce
-  });
-
-  return { scheduledTransaction, transactions };
-}
-
-export async function estimateSwapAmount(provider: JsonRpcProvider, tokenFromTo: [CSPLToken, CSPLToken], amountFrom: string, pancakePair: PancakePair): Promise<bigint> {
+export async function estimateSwapAmount(provider: JsonRpcProvider, tokenFromTo: [CSPLToken, CSPLToken], amountFrom: string, pancakeRouter: NeonAddress, pancakePair: PancakePair): Promise<bigint> {
   try {
     const [tokenFrom] = tokenFromTo;
     const amountIn = new Big(amountFrom).times(new Big(10).pow(tokenFrom.decimals));
-    const router = new Contract(swap.router, pancakeSwapRouterAbi, provider);
+    const router = new Contract(pancakeRouter, pancakeSwapRouterAbi, provider);
     const pairContract = new Contract(pancakePair.pair, pancakeSwapPairAbi, provider);
     const [one, two] = await pairContract.getReserves();
     const [from, to] = tokenFrom.address === pancakePair.a ? [one, two] : [two, one];
@@ -411,5 +344,5 @@ export async function estimateSwapAmount(provider: JsonRpcProvider, tokenFromTo:
   } catch (e) {
     console.log(e);
   }
-  return 0n;
+  return BigInt(0);
 }

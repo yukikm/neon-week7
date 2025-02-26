@@ -4,10 +4,13 @@ import Layout from '../layout/Layout.tsx';
 import SwapForm from '../swap/SwapForm.tsx';
 import FormTabs from '../swap/components/FormTabs/FormTabs.tsx';
 import { useProxyConnection } from '../wallet/Connection.tsx';
-import { tokensV1, tokensV2 } from '../data/tokens';
 import { UITab } from '../models';
 import './App.css';
-import { approveSwapAndWithdrawTokensMultiple, swapTokensMultipleV2 } from '../api/swap.ts';
+import { approveSwapAndWithdrawTokensMultiple, swapTokensMultipleV2 } from '../api/swap';
+import { tokens } from '../data/tokens';
+import { PROXY_ENV } from '../environments';
+
+const { tokensV2, tokensV1 } = tokens(PROXY_ENV);
 
 function App() {
   const tabs: UITab[] = [

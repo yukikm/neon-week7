@@ -18,9 +18,11 @@ import {
   TransactionGas
 } from '../models';
 import { estimateSwapAmount } from '../api/swap';
-import { swap } from '../data/tokens';
+import { tokens } from '../data/tokens';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
+
+const { swap } = tokens(PROXY_ENV);
 
 interface FormData {
   from: { token: string, amount: string },
@@ -292,7 +294,7 @@ export const SwapForm: React.FC = (props: Props) => {
     const amountFrom = formData.from.amount;
     if (pancakePair && amountFrom && Number(amountFrom) > 0) {
       setFieldLoading(true);
-      estimateSwapAmount(provider, tokenFromTo, amountFrom, pancakePair).then(balance => {
+      estimateSwapAmount(provider, tokenFromTo, amountFrom, swap.router, pancakePair).then(balance => {
         const [, tokenTo] = tokenFromTo;
         const amount = new Big(balance.toString()).div(new Big(10).pow(tokenTo.decimals)).toString();
         handleTokenData('to', { token: formData.to.token, amount });
