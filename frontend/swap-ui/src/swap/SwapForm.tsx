@@ -19,13 +19,12 @@ import {
   CSPLToken,
   CTokenBalance,
   FormState,
-  PancakePair,
-  SwapTokenCommonData,
+  PancakePair, SwapTokenCommonData,
   SwapTokenData,
   SwapTokensResponse,
   TransactionGas
 } from '../models';
-import { estimateScheduledGas, estimateSwapAmount } from '../api/swap';
+import { estimateSwapAmount } from '../api/swap';
 import { tokens } from '../data/tokens';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
@@ -49,10 +48,12 @@ interface Props {
   approveMethod(connection: Connection, solanaUser: SolanaNeonAccount, neonEvmProgram: PublicKey, token: CSPLToken, amount: number): Promise<TransactionInstruction | null>;
 
   swapMethod(params: SwapTokenData, transactionData: EstimateScheduledTransaction[], transactionGas: TransactionGas): Promise<SwapTokensResponse>;
+
+  swapMethodOld(params: SwapTokenCommonData): Promise<SwapTokensResponse>;
 }
 
 export const SwapForm: React.FC = (props: Props) => {
-  const { tokensList, dataMethod, approveMethod, swapMethod } = props;
+  const { tokensList, dataMethod, approveMethod, swapMethod, swapMethodOld } = props;
   const { connected, publicKey } = useWallet();
   const [tokenBalanceList, setTokenBalanceList] = useState<CTokenBalance[]>([]);
   const { connection } = useConnection();
@@ -170,12 +171,18 @@ export const SwapForm: React.FC = (props: Props) => {
     };
 
     const transactions = await dataMethod(params);
-    const transactionGas = await estimateScheduledGas(proxyApi, {
-      scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
-      transactions
-    });
-    const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas);
-    return method({ ...params, transactionGas });
+    const { maxPriorityFeePerGas, maxFeePerGas } = await proxyApi.getMaxFeePerGas();
+    const gasLimit = transactions.map(_ => 1e7);
+    const transactionGas: TransactionGas = { maxPriorityFeePerGas, maxFeePerGas, gasLimit };
+    // const transactionGas = await estimateScheduledGas(proxyApi, {
+    //   scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
+    //   transactions
+    // });
+
+    // const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas);
+    // return method({ ...params, transactionGas });
+
+    return swapMethodOld({ ...params, transactionGas });
   };
 
   const cancelTransaction = async (_: ScheduledTransactionStatus) => {
@@ -249,17 +256,19 @@ export const SwapForm: React.FC = (props: Props) => {
 
   const handleSubmit = async () => {
     try {
-      const approveState: FormState = {
-        id: 0,
-        title: `Approve Solana`,
-        status: `NotStarted`,
-        signature: ``,
-        isCompleted: false,
-        method: approveTokens,
-        data: undefined
-      };
+      // todo return back after demo
+      // const approveState: FormState = {
+      //   id: 0,
+      //   title: `Approve Solana`,
+      //   status: `NotStarted`,
+      //   signature: ``,
+      //   isCompleted: false,
+      //   method: approveTokens,
+      //   data: undefined
+      // };
       const swapTokensState: FormState = {
-        id: 1,
+        // id: 1,
+        id: 0,
         title: `Swap tokens`,
         status: `NotStarted`,
         signature: ``,
@@ -267,7 +276,7 @@ export const SwapForm: React.FC = (props: Props) => {
         method: swapTokens,
         data: undefined
       };
-      transactionsRef.current = [approveState, swapTokensState];
+      transactionsRef.current = [/*approveState, */swapTokensState];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
       setLoading(false);

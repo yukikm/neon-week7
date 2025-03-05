@@ -7,9 +7,12 @@ import { useProxyConnection } from '../wallet/Connection.tsx';
 import { SwapTokenData, UITab } from '../models';
 import './App.css';
 import {
-  approveTokensForSwapTransactionData, approveTokenV1Instruction, approveTokenV2Instruction,
+  approveSwapAndWithdrawTokensMultiple,
+  approveTokensForSwapTransactionData,
+  approveTokenV1Instruction,
+  approveTokenV2Instruction,
   pancakeSwapTransactionData,
-  swapTokensMultipleWithGasFee,
+  swapTokensMultipleV2, swapTokensMultipleWithGasFee,
   transferTokenToNeonTransactionData,
   transferTokenToSolanaTransactionData
 } from '../api/swap';
@@ -68,15 +71,18 @@ function App() {
           {tab.id === 0 && <SwapForm tokensList={tokensV1}
                                      dataMethod={v1DataMethod}
                                      approveMethod={approveTokenV1Instruction}
-                                     swapMethod={swapTokensMultipleWithGasFee}></SwapForm>}
+                                     swapMethod={swapTokensMultipleWithGasFee}
+                                     swapMethodOld={approveSwapAndWithdrawTokensMultiple}></SwapForm>}
           {tab.id === 1 && <SwapForm tokensList={tokensV2}
                                      dataMethod={v2DataMethod}
                                      approveMethod={approveTokenV2Instruction}
-                                     swapMethod={swapTokensMultipleWithGasFee}></SwapForm>}
+                                     swapMethod={swapTokensMultipleWithGasFee}
+                                     swapMethodOld={swapTokensMultipleV2}></SwapForm>}
           {tab.id === 2 && <SwapForm tokensList={tokensV2}
                                      dataMethod={v2DataMethod}
                                      approveMethod={approveTokenV2Instruction}
-                                     swapMethod={swapTokensMultipleWithGasFee}></SwapForm>}
+                                     swapMethod={swapTokensMultipleWithGasFee}
+                                     swapMethodOld={swapTokensMultipleV2}></SwapForm>}
         </div>
       </Layout>
     </>
