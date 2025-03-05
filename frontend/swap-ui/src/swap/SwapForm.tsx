@@ -1,7 +1,14 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import { PublicKey } from '@solana/web3.js';
-import { delay, logJson, NeonAddress, ScheduledTransactionStatus } from '@neonevm/solana-sign';
+import { Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import {
+  delay,
+  EstimateScheduledTransaction,
+  logJson,
+  NeonAddress,
+  ScheduledTransactionStatus,
+  SolanaNeonAccount
+} from '@neonevm/solana-sign';
 import { SPLToken } from '@neonevm/token-transfer-core';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Big } from 'big.js';
@@ -14,10 +21,11 @@ import {
   FormState,
   PancakePair,
   SwapTokenCommonData,
+  SwapTokenData,
   SwapTokensResponse,
   TransactionGas
 } from '../models';
-import { estimateSwapAmount } from '../api/swap';
+import { estimateScheduledGas, estimateSwapAmount } from '../api/swap';
 import { tokens } from '../data/tokens';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
@@ -36,11 +44,15 @@ const MAX_AMOUNT = PROXY_ENV === 'devnet' ? 10 : 20;
 interface Props {
   tokensList: SPLToken[];
 
-  swapMethod(params: SwapTokenCommonData): Promise<SwapTokensResponse>;
+  dataMethod(params: SwapTokenData): Promise<EstimateScheduledTransaction[]>;
+
+  approveMethod(connection: Connection, solanaUser: SolanaNeonAccount, neonEvmProgram: PublicKey, token: CSPLToken, amount: number): Promise<TransactionInstruction | null>;
+
+  swapMethod(params: SwapTokenData, transactionData: EstimateScheduledTransaction[], transactionGas: TransactionGas): Promise<SwapTokensResponse>;
 }
 
 export const SwapForm: React.FC = (props: Props) => {
-  const { tokensList, swapMethod } = props;
+  const { tokensList, dataMethod, approveMethod, swapMethod } = props;
   const { connected, publicKey } = useWallet();
   const [tokenBalanceList, setTokenBalanceList] = useState<CTokenBalance[]>([]);
   const { connection } = useConnection();
@@ -122,14 +134,26 @@ export const SwapForm: React.FC = (props: Props) => {
     setTransactionStates(_ => []);
   };
 
-  const approveAndSwap = async (nonce: number, transactionGas: TransactionGas): Promise<SwapTokensResponse> => {
+  const approveTokens = async (_: number): Promise<SwapTokensResponse> => {
+    const [tokenFrom] = tokenFromTo;
+    const amountFrom = Number(formData.from.amount);
+    const instruction = await approveMethod(connection, solanaUser, neonEvmProgram, tokenFrom, amountFrom);
+    const trx = new Transaction();
+    if (instruction) {
+      trx.add(instruction);
+    }
+    return {
+      scheduledTransaction: trx,
+      transactions: []
+    };
+  };
+
+  const swapTokens = async (nonce: number): Promise<SwapTokensResponse> => {
     const [tokenFrom, tokenTo] = tokenFromTo;
     const amountFrom = Number(formData.from.amount);
     const amountTo = Number(formData.to.amount);
     const pancakeRouter: NeonAddress = swap.router;
-
-    return swapMethod({
-      transactionGas,
+    const params: SwapTokenData = {
       nonce,
       proxyApi,
       provider,
@@ -143,7 +167,15 @@ export const SwapForm: React.FC = (props: Props) => {
       pancakePair,
       pancakeRouter,
       chainId
+    };
+
+    const transactions = await dataMethod(params);
+    const transactionGas = await estimateScheduledGas(proxyApi, {
+      scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
+      transactions
     });
+    const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas);
+    return method({ ...params, transactionGas });
   };
 
   const cancelTransaction = async (_: ScheduledTransactionStatus) => {
@@ -156,43 +188,46 @@ export const SwapForm: React.FC = (props: Props) => {
       setLoading(true);
       setError('');
       const nonce = Number(await proxyApi.getTransactionCount(solanaUser.neonWallet));
-      const { maxPriorityFeePerGas: a, maxFeePerGas: b } = await proxyApi.getMaxFeePerGas();
-      const { scheduledTransaction, transactions } = await state.method(nonce, {
-        maxPriorityFeePerGas: a,
-        maxFeePerGas: b,
-        gasLimit: [1e7, 1e7, 1e7] // 10_000_000
-      });
+      const { scheduledTransaction, transactions } = await state.method(nonce);
       changeTransactionStates(state);
-      const signature = await sendTransaction(scheduledTransaction, 'confirmed', { skipPreflight: true });
-      if (signature) {
-        state.signature = signature;
-        changeTransactionStates(state);
-      }
-
-      const results = [];
-      for (const transaction of transactions) {
-        results.push(proxyApi.sendRawScheduledTransaction(`0x${transaction.serialize()}`));
-      }
-      const resultsHash = await Promise.all(results);
-      logJson(resultsHash);
-
-      const start = Date.now();
-      while (DURATION > Date.now() - start) {
-        const { result } = await proxyApi.getScheduledTreeAccount(solanaUser.neonWallet, nonce);
-        if (result) {
-          state.data = result;
-          state.status = result.activeStatus;
-          state.isCompleted = result.transactions.every(i => i.status === 'Success');
+      if (scheduledTransaction.instructions.length > 0) {
+        const signature = await sendTransaction(scheduledTransaction, 'confirmed', { skipPreflight: false });
+        if (signature) {
+          state.status = transactions.length === 0 ? 'Success' : 'NotStarted';
+          state.signature = signature;
           changeTransactionStates(state);
-          if (['Success', 'Empty', 'Failed', 'Skipped'].includes(result.activeStatus)) {
+        }
+      } else {
+        state.status = 'Success';
+      }
+
+      if (transactions.length > 0) {
+        const results = [];
+        for (const transaction of transactions) {
+          results.push(proxyApi.sendRawScheduledTransaction(`0x${transaction.serialize()}`));
+        }
+        const resultsHash = await Promise.all(results);
+        logJson(resultsHash);
+
+        const start = Date.now();
+        while (DURATION > Date.now() - start) {
+          const { result } = await proxyApi.getScheduledTreeAccount(solanaUser.neonWallet, nonce);
+          if (result) {
+            state.data = result;
+            state.status = result.activeStatus;
+            state.isCompleted = result.transactions.every(i => i.status === 'Success');
+            changeTransactionStates(state);
+            if (['Success', 'Empty', 'Failed', 'Skipped'].includes(result.activeStatus)) {
+              break;
+            }
+          } else {
             break;
           }
-        } else {
-          break;
+          await delay(DELAY);
         }
-        await delay(DELAY);
       }
     } catch (e) {
+      state.status = 'Failed';
       console.log(e.message);
       setError(e.message);
       setLoading(false);
@@ -200,25 +235,39 @@ export const SwapForm: React.FC = (props: Props) => {
   };
 
   const executeTransactionsStates = async (transactionStates: FormState[]): Promise<void> => {
-    for (const state of transactionStates) {
-      console.log(`Run transaction ${state.title}`);
-      await executeTransactionState(state);
-      await delay(1e3);
+    for (let i = 0; i < transactionStates.length; i++) {
+      const state = transactionStates[i];
+      if (i > 0 && ['Failed', 'Skipped', 'NoStarted'].includes(transactionStates[i - 1].status)) {
+        break;
+      } else {
+        console.log(`Run transaction ${state.title}`);
+        await executeTransactionState(state);
+        await delay(1e3);
+      }
     }
   };
 
   const handleSubmit = async () => {
     try {
-      const approveSwapAndWithdraw: FormState = {
+      const approveState: FormState = {
         id: 0,
-        title: `Approve and Swap tokens`,
+        title: `Approve Solana`,
         status: `NotStarted`,
         signature: ``,
         isCompleted: false,
-        method: approveAndSwap,
+        method: approveTokens,
         data: undefined
       };
-      transactionsRef.current = [approveSwapAndWithdraw];
+      const swapTokensState: FormState = {
+        id: 1,
+        title: `Swap tokens`,
+        status: `NotStarted`,
+        signature: ``,
+        isCompleted: false,
+        method: swapTokens,
+        data: undefined
+      };
+      transactionsRef.current = [approveState, swapTokensState];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
       setLoading(false);
@@ -248,7 +297,7 @@ export const SwapForm: React.FC = (props: Props) => {
     amount: string;
   }): void => {
     setFormData(prevData => {
-      if (prevData[type].token !== value.token) {
+      if (prevData[type].token !== value.token || prevData[type].amount !== value.amount) {
         setError('');
         resetTransactionStates();
       }

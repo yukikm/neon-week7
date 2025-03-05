@@ -6,36 +6,34 @@ import './SwapState.css';
 
 const Status: FC = ({ formState, loading }: { formState: FormState, loading: boolean }) => {
   const status = useMemo(() => {
-    const data = formState.data;
-    if (data) {
-      switch (data.activeStatus) {
-        case 'NotStarted':
-        case 'InProgress':
-          return 'loading';
-        case 'Success':
-          return 'success';
-        case 'Empty':
-        case 'Failed':
-        case 'Skipped':
-          return 'warning';
-      }
+    const status = formState.status;
+    switch (status) {
+      case 'NotStarted':
+      case 'InProgress':
+        return 'loading';
+      case 'Success':
+        return 'success';
+      case 'Empty':
+      case 'Failed':
+      case 'Skipped':
+        return 'warning';
     }
     if (loading) {
       return 'loading';
     }
     return ``;
-  }, [formState.data, loading]);
+  }, [formState.status, loading]);
 
   return (
     <>
-      {loading && <div className="form-state-loading">
+      <div className="form-state-loading">
         {status === 'loading-gray' &&
           <img className="loading" src="/assets/icons/loading-gray.svg" alt="Loading..." />}
         {status === 'loading' &&
           <img className="loading" src="/assets/icons/loading.svg" alt="Loading..." />}
         {status === 'success' && <img src="/assets/icons/check.svg" alt="Success" />}
         {status === 'warning' && <img src="/assets/icons/warning.svg" alt="Warning" />}
-      </div>}
+      </div>
     </>
   );
 };

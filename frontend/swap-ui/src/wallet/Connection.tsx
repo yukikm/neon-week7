@@ -38,6 +38,7 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
   const [tokenMint, setTokenMint] = useState<PublicKey>();
   const [chainId, setChainId] = useState<number>();
   const [walletBalance, setWalletBalance] = useState(0);
+  let watchAccountId: number;
 
   const getWalletBalance = async () => {
     try {
@@ -104,8 +105,15 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
   }, [provider]);
 
   useEffect(() => {
-    getWalletBalance();
-  }, [publicKey, connection]);
+    getWalletBalance().then();
+    if (publicKey) {
+      watchAccountId = connection.onAccountChange(publicKey, (updatedAccountInfo) => {
+        setWalletBalance(updatedAccountInfo.lamports);
+      }, { commitment: 'confirmed', encoding: 'jsonParsed' });
+    } else if (watchAccountId) {
+      connection.removeAccountChangeListener(watchAccountId).then();
+    }
+  }, [publicKey, connection, getWalletBalance]);
 
   return (
     <ProxyConnectionContext.Provider value={{

@@ -1,12 +1,12 @@
 export const addressesCurvestand = {
   'tokensV1': [
-    {
+/*    {
       'address': '0x3b797f94F7C49B58D7d6b67b8bDB33331d8569d3',
       'address_spl': 'HPsV9Deocecw3GeZv1FkAPNCBRfuVyfw9MMwjwRe1xaU',
       'name': 'Wrapped NEON',
       'symbol': 'wNEON',
       'decimals': 18
-    },
+    },*/
     {
       'address': '0x0503Be7119b775BFC519c4F489C8D52521fEA207',
       'address_spl': '5cR4Gk8kWU2UMXnhLW59pFewwrYuTuZmYbTmGRPSQHBv',

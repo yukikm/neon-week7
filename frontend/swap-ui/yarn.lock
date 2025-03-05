@@ -1293,10 +1293,20 @@
   resolved "https://registry.yarnpkg.com/@mobily/ts-belt/-/ts-belt-3.13.1.tgz#8f8ce2a2eca41d88c2ca70c84d0f47d0f7f5cd5f"
   integrity sha512-K5KqIhPI/EoCTbA6CGbrenM9s41OouyK8A03fGJJcla/zKucsgLbz8HNbeseoLarRPgyWJsUyCYqFhI7t3Ra9Q==
 
-"@neonevm/solana-sign@^0.1.5":
-  version "0.1.5"
-  resolved "https://registry.yarnpkg.com/@neonevm/solana-sign/-/solana-sign-0.1.5.tgz#c8eefd26342bc43dab505b331617c302ea87858a"
-  integrity sha512-+UWVb59ceEMRiADIOS+1oO5WwIheXDUMDx3A8Q94VzUHLrVinMK76XfJ93crOVM8qu+tCMD+bf/48+w3AOxwLA==
+"@neonevm/solana-sign@/Users/able/projects/work/neon/curve/neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.8-a.tgz":
+  version "0.1.8-a"
+  resolved "/Users/able/projects/work/neon/curve/neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.8-a.tgz#0ff863ffbfdd74ddf8bb34c74c81162ed842a0ba"
+  dependencies:
+    "@solana/spl-token" "0.4.9"
+    "@solana/web3.js" "^1.98.0"
+    big.js "^6.2.2"
+    ethers "^6.13.5"
+    fetch-retry "^6.0.0"
+    token-list "https://github.com/neonlabsorg/token-list.git#v5.8.5"
+
+"@neonevm/solana-sign@file:../../../neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.8.tgz":
+  version "0.1.8"
+  resolved "file:../../../neon-solana-signer/packages/core/neonevm-solana-sign-v0.1.8.tgz#fe7c229c17f2936ab453c8d3e58afcb9a4ade363"
   dependencies:
     "@solana/spl-token" "0.4.9"
     "@solana/web3.js" "^1.98.0"

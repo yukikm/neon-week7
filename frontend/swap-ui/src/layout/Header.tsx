@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { useProxyConnection } from '../wallet/Connection.tsx';
 import './layout.css';
 
 const Header = () => {
-  const {walletBalance} = useProxyConnection();
+  const { walletBalance } = useProxyConnection();
 
   return <header className={'flex flex-row justify-center transition z-10'}>
     <div className={'flex flex-row items-left justify-between w-full max-w-2xl p-2'}>

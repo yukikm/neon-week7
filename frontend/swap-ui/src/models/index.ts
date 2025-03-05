@@ -49,6 +49,8 @@ export interface SwapTokenCommonData {
   nonce: number;
 }
 
+export type SwapTokenData = Omit<SwapTokenCommonData, 'transactionGas'>;
+
 export interface SwapTokensResponse {
   scheduledTransaction: Transaction,
   transactions: ScheduledTransaction[]
@@ -60,7 +62,7 @@ export interface FormState {
   isCompleted: boolean;
   signature?: string;
   status: TransactionStatus;
-  method: (nonce: number, transactionGas: TransactionGas) => Promise<SwapTokensResponse>;
+  method: (nonce: number) => Promise<SwapTokensResponse>;
   gas?: TransactionGas;
   data?: ScheduledTreeAccount;
 }
