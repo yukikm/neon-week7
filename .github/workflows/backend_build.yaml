@@ -31,5 +31,5 @@ jobs:
           context: backend/airdrop
           push: true
           file: backend/airdrop/Dockerfile
-          tags: neonlabsorg/neon-solana-signature-demo-backend:${{ env.SHORT_SHA }}
-          labels: neonlabsorg/neon-solana-signature-demo-backend:${{ env.SHORT_SHA }}
+          tags: neonlabsorg/neon-solana-signature-demo-backend:${{ github.ref_name }}-${{ env.SHORT_SHA }}
+          labels: neonlabsorg/neon-solana-signature-demo-backend:${{ github.ref_name }}-${{ env.SHORT_SHA }}
