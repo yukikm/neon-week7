@@ -1,6 +1,7 @@
 import { addressesCurvestand, addressesDevnet, addressesMainnet } from '@data';
 import { Addresses, CSPLToken, SolanaEnvironment } from '@models';
 import { Request, Response } from 'express';
+import { ResponseError } from '@utils/error';
 
 export function addressesList(env: SolanaEnvironment): Addresses {
   let swap: any = addressesCurvestand.swap;
@@ -29,7 +30,7 @@ export function addressesList(env: SolanaEnvironment): Addresses {
       tokensV2 = addressesMainnet.tokensV2;
       break;
     default:
-      throw new Error(`Network doesn't exist`);
+      throw new ResponseError({ code: 404, message: `Error: Network ${env} doesn't exist` });
   }
 
   return { swap, airdrop, tokensV1, tokensV2 };
@@ -42,6 +43,7 @@ export async function tokens(req: Request, res: Response): Promise<any> {
     res.status(200).json(body);
   } catch (err: any) {
     console.log(err);
-    res.status(400).json({ message: err?.message });
+    const code = err.code ?? 400;
+    res.status(code).json({ message: err?.message, payload: err.payload });
   }
 }

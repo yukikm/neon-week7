@@ -8,6 +8,7 @@ const config: Config.InitialOptions = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   moduleNameMapper: {
     '@utils/log': '<rootDir>/src/utils/log',
+    '@utils/url': '<rootDir>/src/utils/url',
     '@services/airdrop': '<rootDir>/src/services/airdrop',
     '@environment': '<rootDir>/src/environment',
   },

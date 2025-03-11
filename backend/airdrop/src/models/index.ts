@@ -10,10 +10,10 @@ export interface CSPLToken {
 }
 
 export interface Addresses {
-  swap: any,
-  airdrop: string[],
-  tokensV1: CSPLToken[],
-  tokensV2: CSPLToken[]
+  swap: any;
+  airdrop: string[];
+  tokensV1: CSPLToken[];
+  tokensV2: CSPLToken[];
 }
 
 export const enum SolanaEnvironment {

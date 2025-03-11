@@ -1,6 +1,12 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import { Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import {
+  Connection,
+  PublicKey,
+  TokenAmount,
+  Transaction,
+  TransactionInstruction
+} from '@solana/web3.js';
 import {
   delay,
   EstimateScheduledTransaction,
@@ -26,11 +32,8 @@ import {
   TransactionGas
 } from '../models';
 import { estimateScheduledGas, estimateSwapAmount } from '../api/swap';
-import { tokens } from '../data/tokens';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
-
-const { swap } = tokens(PROXY_ENV);
 
 interface FormData {
   from: { token: string, amount: string },
@@ -62,18 +65,19 @@ export const SwapForm: React.FC = (props: Props) => {
     chainId,
     neonEvmProgram,
     sendTransaction,
-    provider
+    provider,
+    addresses
   } = useProxyConnection();
-  const [one, two] = tokensList;
-  const [formData, setFormData] = useState<FormData>({
-    from: { token: one.symbol!, amount: '' },
-    to: { token: two.symbol!, amount: '' }
-  });
   const [loading, setLoading] = useState<boolean>(false);
   const [transactionStates, setTransactionStates] = useState<FormState[]>([]);
   const transactionsRef = useRef<FormState[]>([]);
   const [error, setError] = useState<string>(``);
   const [fieldLoading, setFieldLoading] = useState<boolean>(false);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
+  const [formData, setFormData] = useState<FormData>({
+    from: { token: '', amount: '' },
+    to: { token: '', amount: '' }
+  });
 
   const formValidation = useMemo((): boolean => {
     const { from, to } = formData;
@@ -81,20 +85,27 @@ export const SwapForm: React.FC = (props: Props) => {
     const a = Number(from.amount);
     const b = Number(to.amount);
     const c = [NaN, 0];
-    return !from.amount || !to.amount || c.includes(a) || c.includes(b) || !tokenFrom?.balance?.amount;
+    return !from.amount || !to.amount || c.includes(a) || c.includes(b) || !tokenFrom?.balance?.amount ||
+      Number(from.amount) > Number(tokenFrom?.balance?.uiAmount);
   }, [formData, tokenBalanceList]);
 
   const tokenFromTo = useMemo<[CSPLToken, CSPLToken]>(() => {
-    const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
-    const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
-    return [tokenFrom, tokenTo];
+    if (tokensList.length > 0) {
+      const tokenFrom = tokensList.find(t => t.symbol === formData.from.token)!;
+      const tokenTo = tokensList.find(t => t.symbol === formData.to.token)!;
+      return [tokenFrom, tokenTo];
+    }
+    return [];
   }, [formData.from.token, formData.to.token, tokensList]);
 
   const pancakePair = useMemo<PancakePair>(() => {
-    const [tokenFrom, tokenTo] = tokenFromTo;
-    const pair = `${tokenFrom.symbol}/${tokenTo.symbol}`.toLowerCase();
-    return swap.pairs[pair];
-  }, [tokenFromTo]);
+    if (tokenFromTo.length > 0) {
+      const [tokenFrom, tokenTo] = tokenFromTo;
+      const pair = `${tokenFrom?.symbol}/${tokenTo?.symbol}`.toLowerCase();
+      return addresses.swap.pairs[pair];
+    }
+    return {} as PancakePair;
+  }, [addresses.swap.pairs, tokenFromTo]);
 
   const buttonText = useMemo((): string => {
     const { from, to } = formData;
@@ -152,7 +163,7 @@ export const SwapForm: React.FC = (props: Props) => {
     const [tokenFrom, tokenTo] = tokenFromTo;
     const amountFrom = Number(formData.from.amount);
     const amountTo = Number(formData.to.amount);
-    const pancakeRouter: NeonAddress = swap.router;
+    const pancakeRouter: NeonAddress = addresses.swap.router;
     const params: SwapTokenData = {
       nonce,
       proxyApi,
@@ -305,26 +316,53 @@ export const SwapForm: React.FC = (props: Props) => {
     });
   };
 
-  useEffect(() => {
-    const getBalance = async (): Promise<void> => {
-      const tokens: CTokenBalance[] = [];
-      for (const token of tokensList) {
-        const cTokenBalance: CTokenBalance = { token, balance: undefined };
-        if (publicKey) {
-          try {
-            const tokenMint = new PublicKey(token.address_spl);
-            const tokenAddress = getAssociatedTokenAddressSync(tokenMint, publicKey);
-            const { value: balance } = await connection.getTokenAccountBalance(tokenAddress);
-            cTokenBalance['balance'] = balance;
-          } catch (e) {
-            console.log(e?.message);
-          }
-        }
-        tokens.push(cTokenBalance);
+  const getTokenBalance = async (token: SPLToken): Promise<TokenAmount | undefined> => {
+    if (publicKey) {
+      try {
+        const tokenMint = new PublicKey(token.address_spl);
+        const tokenAddress = getAssociatedTokenAddressSync(tokenMint, publicKey);
+        const { value: balance } = await connection.getTokenAccountBalance(tokenAddress);
+        return balance;
+      } catch (e) {
+        console.log(e?.message);
       }
-      setTokenBalanceList(() => tokens);
-    };
+    }
+    return undefined;
+  };
 
+  const getBalance = async (): Promise<void> => {
+    const tokens: CTokenBalance[] = [];
+    for (const token of tokensList) {
+      const cTokenBalance: CTokenBalance = { token, balance: undefined };
+      cTokenBalance.balance = await getTokenBalance(token);
+      tokens.push(cTokenBalance);
+    }
+    setTokenBalanceList(() => tokens);
+  };
+
+  const updateTokenBalance = async (token: SPLToken): Promise<void> => {
+    const id = tokenBalanceList.findIndex(i => i.token.address === token.address);
+    setBalanceLoading(true);
+    if (id > -1) {
+      const cTokenBalance = tokenBalanceList[id];
+      cTokenBalance.balance = await getTokenBalance(token);
+    }
+    setTokenBalanceList(() => tokenBalanceList);
+    setBalanceLoading(false);
+  };
+
+  useEffect(() => {
+    if (tokensList.length > 0) {
+      setFormData(prevState => {
+        const [one, two] = tokensList;
+        prevState.from.token = one.symbol;
+        prevState.to.token = two.symbol;
+        return prevState;
+      });
+    }
+  }, [addresses, tokensList]);
+
+  useEffect(() => {
     getBalance().catch(console.log);
   }, [publicKey, loading]);
 
@@ -343,7 +381,7 @@ export const SwapForm: React.FC = (props: Props) => {
     const amountFrom = formData.from.amount;
     if (pancakePair && amountFrom && Number(amountFrom) > 0) {
       setFieldLoading(true);
-      estimateSwapAmount(provider, tokenFromTo, amountFrom, swap.router, pancakePair).then(balance => {
+      estimateSwapAmount(provider, tokenFromTo, amountFrom, addresses.swap.router, pancakePair).then(balance => {
         const [, tokenTo] = tokenFromTo;
         const amount = new Big(balance.toString()).div(new Big(10).pow(tokenTo.decimals)).toString();
         handleTokenData('to', { token: formData.to.token, amount });
@@ -362,7 +400,9 @@ export const SwapForm: React.FC = (props: Props) => {
           <TokenField data={formData.from} tokensList={tokenBalanceList}
                       excludedToken={formData.to.token}
                       setTokenData={handleTokenData}
+                      updateTokenBalance={updateTokenBalance}
                       maxAmount={MAX_AMOUNT}
+                      loading={balanceLoading}
                       label="From" type="from"></TokenField>
         </div>
         <div className="form-divider">
@@ -375,8 +415,9 @@ export const SwapForm: React.FC = (props: Props) => {
           <TokenField data={formData.to} tokensList={tokenBalanceList}
                       excludedToken={formData.from.token}
                       setTokenData={handleTokenData}
+                      updateTokenBalance={updateTokenBalance}
                       maxAmount={MAX_AMOUNT}
-                      loading={fieldLoading}
+                      loading={fieldLoading || balanceLoading}
                       disabled={true}
                       label="To" type="to"></TokenField>
         </div>

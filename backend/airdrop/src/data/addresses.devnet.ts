@@ -95,6 +95,7 @@ export const addressesDevnet = {
     neonTokenTransfer: '0xA4C62831B47C0Bb3a0cF569B7a22A41749a48ED7'
   },
   airdrop: [
+    '5UMhuc2A58xPAPdtLGuYt7SyEQ1pRnyEGDf1fdzJGe4U',
     '4MymVAaQos56woWKnwJdBaKB1XTnQ397KE36WYAZ6qV6',
     'ExYuMMxSy5P6Lhbay2TX1BCn5LJRqFnKwW5d6EQpPHS4'
   ]

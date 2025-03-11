@@ -4,7 +4,7 @@ import bs58 from 'bs58';
 import { get, post } from '../src/utils/rest';
 import { sendSolanaTransaction, solanaAirdrop, solanaConnection } from '../src/utils/solana';
 import { CSPLToken, SolanaEnvironment } from '../src/models';
-import { SOLANA_WALLET } from '../src/environment';
+import { AIRDROP_LIMIT, SOLANA_WALLET } from '../src/environment';
 import { delay } from '../src/utils/delay';
 
 const apiUrl = `http://localhost:7005/api/v1`;
@@ -17,8 +17,9 @@ beforeAll(async () => {
 
 describe('Check airdrop', () => {
   it(`Request wrong token addresses`, async () => {
-    const response = await get(`${apiUrl}/tokens/mainnet`);
-    expect(response.message).toBe(`Network doesn't exist`);
+    const network = `testnet`;
+    const response = await get(`${apiUrl}/tokens/${network}`);
+    expect(response.message).toBe(`Error: Network ${network} doesn't exist`);
   });
 
   it(`Airdrop tokens for new account`, async () => {
@@ -67,7 +68,28 @@ describe('Check airdrop', () => {
       token: token.address_spl,
       amount: 1
     });
-    console.log(response);
-    expect(response.message).toBe(`Request limit exceeded`);
+    expect(response.message).toBe(`Failed: request limit exceeded`);
+  });
+
+  it(`Airdrop tokens large amount`, async () => {
+    const keypair = new Keypair();
+    const [token] = (await get(`${apiUrl}/tokens/localnet`))?.tokensV1;
+    const response = await post(`${apiUrl}/airdrop`, {
+      wallet: keypair.publicKey.toBase58(),
+      token: token.address_spl,
+      amount: Number(AIRDROP_LIMIT) + 1
+    });
+    expect(response.message).toBe(`Failed: trying to get a large amount`);
+  });
+
+  it(`Airdrop unknown token`, async () => {
+    const keypair = new Keypair();
+    const tokenKey = PublicKey.unique();
+    const response = await post(`${apiUrl}/airdrop`, {
+      wallet: keypair.publicKey.toBase58(),
+      token: tokenKey,
+      amount: 1
+    });
+    expect(response.message).toBe(`Failed: token transfer is not supported`);
   });
 });

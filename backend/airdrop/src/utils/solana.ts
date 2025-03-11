@@ -3,7 +3,7 @@ import {
   clusterApiUrl,
   Commitment,
   Connection,
-  ConnectionConfig,
+  ConnectionConfig, Keypair,
   LAMPORTS_PER_SOL,
   PublicKey,
   RpcResponseAndContext,
@@ -12,12 +12,19 @@ import {
   SimulatedTransactionResponse,
   Transaction
 } from '@solana/web3.js';
-import { SOLANA_RPC_DEVNET, SOLANA_RPC_LOCALNET, SOLANA_RPC_MAINNET } from '@environment';
+import {
+  SOLANA_BANK_DEVNET,
+  SOLANA_BANK_LOCALNET, SOLANA_BANK_MAINNET,
+  SOLANA_RPC_DEVNET,
+  SOLANA_RPC_LOCALNET,
+  SOLANA_RPC_MAINNET
+} from '@environment';
 import { log, logJson } from '@utils/log';
 import { isValidUrl } from '@utils/url';
+import bs58 from 'bs58';
 
-export function solanaConnection(stand: SolanaEnvironment, commitmentOrConfig: Commitment | ConnectionConfig = 'confirmed'): Connection {
-  switch (stand) {
+export function solanaConnection(network: SolanaEnvironment, commitmentOrConfig: Commitment | ConnectionConfig = 'confirmed'): Connection {
+  switch (network) {
     case SolanaEnvironment.devnet: {
       const url = isValidUrl(SOLANA_RPC_DEVNET) ? SOLANA_RPC_DEVNET : clusterApiUrl('devnet');
       return new Connection(url, commitmentOrConfig);
@@ -30,6 +37,21 @@ export function solanaConnection(stand: SolanaEnvironment, commitmentOrConfig: C
       return new Connection(SOLANA_RPC_LOCALNET, commitmentOrConfig);
     default:
       return new Connection(SOLANA_RPC_LOCALNET, commitmentOrConfig);
+  }
+}
+
+export function solanaBankWallet(network: SolanaEnvironment): Keypair {
+  switch (network) {
+    case SolanaEnvironment.devnet: {
+      return Keypair.fromSecretKey(bs58.decode(SOLANA_BANK_DEVNET));
+    }
+    case SolanaEnvironment.mainnet: {
+      return Keypair.fromSecretKey(bs58.decode(SOLANA_BANK_MAINNET));
+    }
+    case SolanaEnvironment.localnet:
+      return Keypair.fromSecretKey(bs58.decode(SOLANA_BANK_LOCALNET));
+    default:
+      return Keypair.fromSecretKey(bs58.decode(SOLANA_BANK_LOCALNET));
   }
 }
 

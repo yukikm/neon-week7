@@ -15,8 +15,6 @@ import {
   EstimatedScheduledGasPayData,
   EstimateScheduledTransaction,
   logJson,
-  MAX_FEE_PER_GAS_DEFAULT,
-  MAX_PRIORITY_FEE_PER_GAS_DEFAULT,
   MultipleTransactions,
   NeonAddress,
   NeonProxyRpcApi,

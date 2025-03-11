@@ -13,7 +13,9 @@ import {
 import { JsonRpcProvider } from 'ethers';
 import { NEON_CORE_API_RPC_URL, PROXY_ENV, SOLANA_URL } from '../environments';
 import { simulateTransaction } from '../utils/solana.ts';
-import { Props } from '../models';
+import { Props, TokensListResponse } from '../models';
+import { getTokensList } from '../api/tokens.ts';
+import { tokens } from '../data/tokens.ts';
 
 export interface ProxyConnectionContextData {
   chainId: number;
@@ -23,6 +25,7 @@ export interface ProxyConnectionContextData {
   proxyApi: NeonProxyRpcApi;
   provider: JsonRpcProvider;
   walletBalance: number;
+  addresses: TokensListResponse;
 
   sendTransaction(transaction: Transaction, commitment?: Commitment, options?: SendOptions): Promise<string | undefined>;
 
@@ -38,6 +41,8 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
   const [tokenMint, setTokenMint] = useState<PublicKey>();
   const [chainId, setChainId] = useState<number>();
   const [walletBalance, setWalletBalance] = useState(0);
+  const data = tokens(PROXY_ENV);
+  const [addresses, setAddresses] = useState<TokensListResponse>(data);
   let watchAccountId: number;
 
   const getWalletBalance = async () => {
@@ -59,8 +64,8 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
   const sendTransaction = async (transaction: Transaction, commitment: Commitment = 'confirmed', options?: SendOptions): Promise<string | undefined> => {
     if (signTransaction) {
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash(commitment);
-      transaction.recentBlockhash = blockhash;
-      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.recentBlockhash = transaction.recentBlockhash ? transaction.recentBlockhash : blockhash;
+      transaction.lastValidBlockHeight = transaction.lastValidBlockHeight ? transaction.lastValidBlockHeight : lastValidBlockHeight;
       transaction.feePayer = solanaUser.publicKey;
       const { value } = await simulateTransaction(connection, transaction, commitment);
       logJson(value.err);
@@ -115,6 +120,19 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
     }
   }, [publicKey, connection, getWalletBalance]);
 
+  useEffect(() => {
+    const getAddresses = async () => {
+      try {
+        const addresses = await getTokensList(PROXY_ENV);
+        setAddresses(addresses);
+      } catch (_) {
+        const addresses = tokens(PROXY_ENV);
+        setAddresses(addresses);
+      }
+    };
+    getAddresses().then();
+  }, []);
+
   return (
     <ProxyConnectionContext.Provider value={{
       chainId: chainId!,
@@ -124,6 +142,7 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
       proxyApi: proxyApi!,
       provider: provider!,
       walletBalance,
+      addresses,
       sendTransaction,
       getWalletBalance
     }}>
