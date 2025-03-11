@@ -1,17 +1,22 @@
-import React, { useMemo } from 'react';
+import { delay } from '@neonevm/solana-sign';
+import React, { useMemo, useState } from 'react';
 import { tokenIcons } from '../../../data/tokens';
 import { useProxyConnection } from '../../../wallet/Connection';
-import { CTokenBalance } from '../../../models';
+import { CTokenBalance, TransactionResponse } from '../../../models';
+import { lastAridropTransactionState } from '../../../api/tokens';
+import { PROXY_ENV } from '../../../environments';
 import './TokenItem.css';
 
-function TokenItem({ token, loading, state, tokenSelect, tokenAirdrop }: {
+const TRANSACTION_INTERVAL = 60;
+
+function TokenItem({ token, tokenSelect, tokenAirdrop }: {
   token: CTokenBalance;
-  loading: boolean;
-  state: 'loading' | 'success' | 'failed' | 'none';
   tokenSelect(token: CTokenBalance);
-  tokenAirdrop(token: CTokenBalance);
+  tokenAirdrop(token: CTokenBalance): Promise<TransactionResponse>;
 }) {
-  const { addresses } = useProxyConnection();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [state, setState] = useState<'loading' | 'success' | 'failed' | 'none'>('none');
+  const { addresses, solanaUser } = useProxyConnection();
 
   const tokenName = useMemo(() => {
     return token.token.name ? token.token.name : '';
@@ -29,7 +34,7 @@ function TokenItem({ token, loading, state, tokenSelect, tokenAirdrop }: {
 
   const tokenIcon = useMemo(() => {
     const symbol = tokenSymbol.toLowerCase();
-    const icon = tokenIcons.hasOwnProperty(symbol) ? tokenIcons[symbol] : 'token.png';
+    const icon = Object.prototype.hasOwnProperty.call(tokenIcons, symbol) ? tokenIcons[symbol] : 'token.svg';
     return `/tokens/${icon}`;
   }, [tokenSymbol]);
 
@@ -37,8 +42,37 @@ function TokenItem({ token, loading, state, tokenSelect, tokenAirdrop }: {
     return !!addresses.airdrop?.includes(token.token.address_spl);
   }, [addresses.airdrop, token.token.address_spl]);
 
+  const delayTransaction = async (timestamp: number): Promise<void> => {
+    const remainingTime = Math.floor(Date.now() / 1e3) - timestamp;
+    if (TRANSACTION_INTERVAL - remainingTime > 0) {
+      await delay((TRANSACTION_INTERVAL - remainingTime) * 1e3);
+    }
+  };
+
   const handleSelect = (): void => tokenSelect(token);
-  const handleAirdrop = (): void => tokenAirdrop(token);
+  const handleAirdrop = async (): Promise<void> => {
+    setLoading(true);
+    setState('loading');
+    try {
+      const { transaction, message, payload } = await tokenAirdrop(token);
+      if (transaction) {
+        setState('success');
+        const { lastTrx } = await lastAridropTransactionState(solanaUser.publicKey, token.token, PROXY_ENV);
+        await delayTransaction(lastTrx);
+      } else if (payload && Object.prototype.hasOwnProperty.call(payload, 'lastTrx')) {
+        setState('failed');
+        await delayTransaction(payload['lastTrx']);
+      } else {
+        throw new Error(message);
+      }
+    } catch (_) {
+      setState('failed');
+      const { lastTrx } = await lastAridropTransactionState(solanaUser.publicKey, token.token, PROXY_ENV);
+      await delayTransaction(lastTrx);
+    }
+    setLoading(false);
+    setState('none');
+  };
 
   return (
     <div className="flex items-center flex-row gap-[6px] w-full">

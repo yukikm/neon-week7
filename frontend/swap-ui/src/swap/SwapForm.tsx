@@ -10,8 +10,11 @@ import {
 import {
   delay,
   EstimateScheduledTransaction,
+  log,
   logJson,
   NeonAddress,
+  PreparatorySolanaTransaction,
+  prepareSolanaInstruction,
   ScheduledTransactionStatus,
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
@@ -51,7 +54,7 @@ interface Props {
 
   approveMethod(connection: Connection, solanaUser: SolanaNeonAccount, neonEvmProgram: PublicKey, token: CSPLToken, amount: number): Promise<TransactionInstruction | null>;
 
-  swapMethod(params: SwapTokenData, transactionData: EstimateScheduledTransaction[], transactionGas: TransactionGas): Promise<SwapTokensResponse>;
+  swapMethod(params: SwapTokenData, transactionData: EstimateScheduledTransaction[], transactionGas: TransactionGas, instructions: TransactionInstruction[]): Promise<SwapTokensResponse>;
 }
 
 export const SwapForm: React.FC = (props: Props) => {
@@ -181,17 +184,27 @@ export const SwapForm: React.FC = (props: Props) => {
     };
 
     const transactions = await dataMethod(params);
+    const approveInstruction = await approveMethod(connection, solanaUser, neonEvmProgram, tokenFrom, amountFrom);
+    const preparatorySolanaTransactions: PreparatorySolanaTransaction[] = [];
+    const instructions: TransactionInstruction[] = [];
+    if (approveInstruction) {
+      preparatorySolanaTransactions.push({
+        instructions: [prepareSolanaInstruction(approveInstruction!)]
+      });
+      instructions.push(approveInstruction);
+    }
     const transactionGas = await estimateScheduledGas(proxyApi, {
       scheduledSolanaPayer: solanaUser.publicKey.toBase58(),
-      transactions
+      transactions,
+      preparatorySolanaTransactions
     });
-    const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas);
+    const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas, instructions);
     return method({ ...params, transactionGas });
   };
 
   const cancelTransaction = async (_: ScheduledTransactionStatus) => {
     const { result } = await proxyApi.getPendingTransactions(solanaUser.publicKey);
-    console.log(result);
+    log(result);
   };
 
   const executeTransactionState = async (state: FormState): Promise<void> => {
@@ -239,7 +252,7 @@ export const SwapForm: React.FC = (props: Props) => {
       }
     } catch (e) {
       state.status = 'Failed';
-      console.log(e.message);
+      log(e.message);
       setError(e.message);
       setLoading(false);
     }
@@ -251,7 +264,7 @@ export const SwapForm: React.FC = (props: Props) => {
       if (i > 0 && ['Failed', 'Skipped', 'NoStarted'].includes(transactionStates[i - 1].status)) {
         break;
       } else {
-        console.log(`Run transaction ${state.title}`);
+        log(`Run transaction ${state.title}`);
         await executeTransactionState(state);
         await delay(1e3);
       }
@@ -278,12 +291,12 @@ export const SwapForm: React.FC = (props: Props) => {
         method: swapTokens,
         data: undefined
       };
-      transactionsRef.current = [approveState, swapTokensState];
+      transactionsRef.current = [/*approveState, */swapTokensState];
       addTransactionStates(transactionsRef.current);
       await executeTransactionsStates(transactionsRef.current);
       setLoading(false);
     } catch (e: unknown) {
-      console.log(e.message);
+      log(e.message);
       if (transactionsRef.current.some(i => !i.data)) {
         transactionsRef.current = [];
         addTransactionStates(transactionsRef.current);
@@ -324,7 +337,7 @@ export const SwapForm: React.FC = (props: Props) => {
         const { value: balance } = await connection.getTokenAccountBalance(tokenAddress);
         return balance;
       } catch (e) {
-        console.log(e?.message);
+        log(e?.message);
       }
     }
     return undefined;
@@ -363,7 +376,7 @@ export const SwapForm: React.FC = (props: Props) => {
   }, [addresses, tokensList]);
 
   useEffect(() => {
-    getBalance().catch(console.log);
+    getBalance().catch(log);
   }, [publicKey, loading]);
 
   useEffect(() => {

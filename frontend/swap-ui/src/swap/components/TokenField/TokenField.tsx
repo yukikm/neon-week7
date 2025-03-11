@@ -41,7 +41,7 @@ export const TokenField: React.FC = (props: Props) => {
 
   const tokenIcon = useMemo(() => {
     const symbol = token?.token.symbol.toLowerCase();
-    const icon = Object.prototype.hasOwnProperty.call(tokenIcons, symbol!) ? tokenIcons[symbol] : 'token.png';
+    const icon = Object.prototype.hasOwnProperty.call(tokenIcons, symbol!) ? tokenIcons[symbol] : 'token.svg';
     return `/tokens/${icon}`;
   }, [token]);
 

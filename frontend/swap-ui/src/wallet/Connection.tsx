@@ -6,16 +6,17 @@ import {
   delay,
   getGasToken,
   getProxyState,
+  log,
   logJson,
   NeonProxyRpcApi,
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
 import { JsonRpcProvider } from 'ethers';
 import { NEON_CORE_API_RPC_URL, PROXY_ENV, SOLANA_URL } from '../environments';
-import { simulateTransaction } from '../utils/solana.ts';
+import { simulateTransaction } from '../utils/solana';
 import { Props, TokensListResponse } from '../models';
-import { getTokensList } from '../api/tokens.ts';
-import { tokens } from '../data/tokens.ts';
+import { getTokensList } from '../api/tokens';
+import { tokens } from '../data/tokens';
 
 export interface ProxyConnectionContextData {
   chainId: number;
@@ -56,7 +57,7 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
         setWalletBalance(0);
       }
     } catch (e) {
-      console.log(e);
+      log(e);
       setWalletBalance(0);
     }
   };
@@ -82,7 +83,7 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
       } else {
         await delay(5e3);
       }
-      console.log(`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=${SOLANA_URL}`);
+      log(`https://explorer.solana.com/tx/${signature}?cluster=custom&customUrl=${SOLANA_URL}`);
       return signature;
     }
   };
