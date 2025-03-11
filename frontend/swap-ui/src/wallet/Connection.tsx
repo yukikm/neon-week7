@@ -99,12 +99,11 @@ export const ProxyConnectionProvider: FC<Props> = ({ children }) => {
 
   useEffect(() => {
     (async () => {
-      const { chainId: chainIdB } = await provider.getNetwork();
       const result = await getProxyState(`${NEON_CORE_API_RPC_URL}/sol`);
       setEvmProgramAddress(result.evmProgramAddress);
       setProxyApi(result.proxyApi);
-      setChainId(Number(chainIdB));
-      const token = getGasToken(result.tokensList, Number(chainIdB));
+      setChainId(result.chainId);
+      const token = getGasToken(result.tokensList, result.chainId);
       setTokenMint(token.tokenMintAddress);
     })();
   }, [provider]);
