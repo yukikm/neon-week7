@@ -2,6 +2,7 @@ import { addressesCurvestand, addressesDevnet, addressesMainnet } from '@data';
 import { Addresses, CSPLToken, SolanaEnvironment } from '@models';
 import { Request, Response } from 'express';
 import { ResponseError } from '@utils/error';
+import { log } from '@utils/log';
 
 export function addressesList(env: SolanaEnvironment): Addresses {
   let swap: any = addressesCurvestand.swap;
@@ -42,7 +43,7 @@ export async function tokens(req: Request, res: Response): Promise<any> {
     const body = await addressesList(network as SolanaEnvironment);
     res.status(200).json(body);
   } catch (err: any) {
-    console.log(err);
+    log(err);
     const code = err.code ?? 400;
     res.status(code).json({ message: err?.message, payload: err.payload });
   }

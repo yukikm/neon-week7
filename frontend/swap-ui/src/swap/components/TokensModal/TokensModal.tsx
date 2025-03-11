@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Transaction } from '@solana/web3.js';
 import { SPLToken } from '@neonevm/token-transfer-core';
-import { delay } from '@neonevm/solana-sign';
 import Modal from 'react-modal';
 import bs58 from 'bs58';
 import TokenItem from '../TokenItem/TokenItem';
 import { tokenAirdropTransaction } from '../../../api/tokens';
 import { useProxyConnection } from '../../../wallet/Connection';
-import { CTokenBalance } from '../../../models';
-import './TokensModal.css';
+import { CTokenBalance, TransactionResponse } from '../../../models';
 import { PROXY_ENV } from '../../../environments';
+import './TokensModal.css';
 
 Modal.setAppElement('#root');
 
@@ -22,12 +21,10 @@ interface Props {
   updateTokenBalance(token: SPLToken): Promise<void>;
 }
 
-const TRANSACTION_INTERVAL = 60;
+const excludeTokens = [`So11111111111111111111111111111111111111112`];
 
 function TokensModal(props: Props) {
   const { openModal, closeModal, tokensList, excludedToken, updateTokenBalance } = props;
-  const [loading, setLoading] = useState<boolean>(false);
-  const [state, setState] = useState<'loading' | 'success' | 'failed' | 'none'>('none');
   const {
     solanaUser,
     sendTransaction
@@ -37,37 +34,19 @@ function TokensModal(props: Props) {
     closeModal(token);
   };
 
-  const tokenAirdrop = async ({ token }: CTokenBalance): Promise<void> => {
-    setLoading(true);
-    setState('loading');
-    try {
-      const {
-        transaction,
-        message,
-        payload
-      } = await tokenAirdropTransaction(solanaUser.publicKey, token, PROXY_ENV, 10);
-      if (transaction) {
-        const recoveredTransaction = Transaction.from(bs58.decode(transaction));
-        await sendTransaction(recoveredTransaction);
-        await updateTokenBalance(token);
-        setState('success');
-        await delay(5e4);
-      } else if (payload && Object.prototype.hasOwnProperty.call(payload, 'lastTrx')) {
-        setState('failed');
-        const remainingTime = Math.floor(Date.now() / 1e3) - payload['lastTrx'];
-        if (TRANSACTION_INTERVAL - remainingTime > 0) {
-          await delay((TRANSACTION_INTERVAL - remainingTime) * 1e3);
-        }
-      } else {
-        throw new Error(message);
-      }
-    } catch (e) {
-      console.log(e);
-      setState('failed');
-      await delay(TRANSACTION_INTERVAL - 10);
+  const tokenAirdrop = async ({ token }: CTokenBalance): Promise<TransactionResponse> => {
+    const amount = excludeTokens.includes(token.address_spl) ? 0.1 : 10;
+    const {
+      transaction,
+      message,
+      payload
+    } = await tokenAirdropTransaction(solanaUser.publicKey, token, PROXY_ENV, amount);
+    if (transaction) {
+      const recoveredTransaction = Transaction.from(bs58.decode(transaction));
+      await sendTransaction(recoveredTransaction);
+      await updateTokenBalance(token);
     }
-    setLoading(false);
-    setState('none');
+    return { transaction, message, payload };
   };
 
   const handleCloseModal = (): void => {
@@ -92,8 +71,7 @@ function TokensModal(props: Props) {
         </div>
         <div className="tokens-content">
           {tokens.map(((token, key) =>
-            <TokenItem token={token} tokenSelect={tokenSelect} tokenAirdrop={tokenAirdrop} key={key}
-                       loading={loading} state={state} />))}
+            <TokenItem token={token} tokenSelect={tokenSelect} tokenAirdrop={tokenAirdrop} key={key} />))}
         </div>
       </div>
     </Modal>

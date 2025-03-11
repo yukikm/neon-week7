@@ -97,6 +97,8 @@ export const addressesDevnet = {
   airdrop: [
     '5UMhuc2A58xPAPdtLGuYt7SyEQ1pRnyEGDf1fdzJGe4U',
     '4MymVAaQos56woWKnwJdBaKB1XTnQ397KE36WYAZ6qV6',
-    'ExYuMMxSy5P6Lhbay2TX1BCn5LJRqFnKwW5d6EQpPHS4'
+    'ExYuMMxSy5P6Lhbay2TX1BCn5LJRqFnKwW5d6EQpPHS4',
+    'F4DgNXqiT3zUQA7dhqN5VzEPkRcd8vtqFwpJSwEEvnz5',
+    'So11111111111111111111111111111111111111112',
   ]
 };

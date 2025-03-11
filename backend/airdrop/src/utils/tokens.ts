@@ -24,7 +24,6 @@ import { ResponseError } from '@utils/error';
 import bs58 from 'bs58';
 
 export async function transferTokens(connection: Connection, bankWallet: Keypair, wallet: PublicKey, tokenAddress: PublicKey, amount: bigint): Promise<string> {
-  console.log(connection.rpcEndpoint, bankWallet.publicKey.toBase58());
   try {
     const feePayer = wallet;
     const tokenMint = await getMint(connection, tokenAddress);
