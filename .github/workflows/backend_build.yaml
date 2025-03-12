@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-neon-tracer-docker-image:
+  build-neon-solana-signature-demo-docker-image:
     runs-on: ["self-hosted", "k8s-prod"]
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
           run_number=${GITHUB_RUN_NUMBER}
           echo "BUILD_ID=${branch}-${sha}-${run_number}" >> $GITHUB_ENV
 
-      - name: Build and push neon-tracer image
+      - name: Build and push neon-solana-signature-demo image
         uses: docker/build-push-action@v5.3.0
         with:
           context: backend/airdrop
