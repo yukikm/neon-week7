@@ -1,18 +1,14 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import {
-  Connection,
-  PublicKey,
-  TokenAmount,
-  Transaction,
-  TransactionInstruction
-} from '@solana/web3.js';
+import { Connection, PublicKey, TokenAmount, TransactionInstruction } from '@solana/web3.js';
 import {
   delay,
   EstimateScheduledTransaction,
   log,
   logJson,
   NeonAddress,
+  PreparatorySolanaTransaction,
+  prepareSolanaInstruction,
   ScheduledTransactionStatus,
   SolanaNeonAccount
 } from '@neonevm/solana-sign';
@@ -32,7 +28,7 @@ import {
   SwapTokensResponse,
   TransactionGas
 } from '../models';
-import { estimateSwapAmount } from '../api/swap';
+import { estimateScheduledGas, estimateSwapAmount } from '../api/swap';
 import { PROXY_ENV } from '../environments';
 import './SwapForm.css';
 
@@ -58,7 +54,7 @@ interface Props {
 }
 
 export const SwapForm: React.FC = (props: Props) => {
-  const { tokensList, dataMethod, approveMethod, swapMethod, swapMethodOld } = props;
+  const { tokensList, dataMethod, approveMethod, swapMethod } = props;
   const { connected, publicKey } = useWallet();
   const [tokenBalanceList, setTokenBalanceList] = useState<CTokenBalance[]>([]);
   const { connection } = useConnection();
@@ -148,20 +144,6 @@ export const SwapForm: React.FC = (props: Props) => {
     setTransactionStates(_ => []);
   };
 
-  const approveTokens = async (_: number): Promise<SwapTokensResponse> => {
-    const [tokenFrom] = tokenFromTo;
-    const amountFrom = Number(formData.from.amount);
-    const instruction = await approveMethod(connection, solanaUser, neonEvmProgram, tokenFrom, amountFrom);
-    const trx = new Transaction();
-    if (instruction) {
-      trx.add(instruction);
-    }
-    return {
-      scheduledTransaction: trx,
-      transactions: []
-    };
-  };
-
   const swapTokens = async (nonce: number): Promise<SwapTokensResponse> => {
     const [tokenFrom, tokenTo] = tokenFromTo;
     const amountFrom = Number(formData.from.amount);
@@ -182,15 +164,8 @@ export const SwapForm: React.FC = (props: Props) => {
       pancakeRouter,
       chainId
     };
-
     const transactions = await dataMethod(params);
-    // remove after devnet/mainnet proxy releases
-    const { maxPriorityFeePerGas, maxFeePerGas } = await proxyApi.getMaxFeePerGas();
-    const gasLimit = transactions.map(_ => 1e7);
-    const transactionGas: TransactionGas = { maxPriorityFeePerGas, maxFeePerGas, gasLimit };
-    return swapMethodOld({ ...params, transactionGas });
-    // Uncomment after devnet/mainnet proxy release
-/*    const approveInstruction = await approveMethod(connection, solanaUser, neonEvmProgram, tokenFrom, amountFrom);
+    const approveInstruction = await approveMethod(connection, solanaUser, neonEvmProgram, tokenFrom, amountFrom);
     const preparatorySolanaTransactions: PreparatorySolanaTransaction[] = [];
     const instructions: TransactionInstruction[] = [];
     if (approveInstruction) {
@@ -205,8 +180,7 @@ export const SwapForm: React.FC = (props: Props) => {
       preparatorySolanaTransactions
     });
     const method = (params: SwapTokenCommonData) => swapMethod(params, transactions, transactionGas, instructions);
-    return method({ ...params, transactionGas });*/
-    // ------
+    return method({ ...params, transactionGas });
   };
 
   const cancelTransaction = async (_: ScheduledTransactionStatus) => {
