@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 .tokens-modal {
-  @apply flex flex-col bg-[#0C111D] rounded-lg w-[480px];
+  @apply flex flex-col bg-[#0C111D] rounded-lg w-[540px];
 }
 
 .tokens-header {
@@ -19,5 +19,17 @@
   @apply flex flex-row justify-between items-center p-[4px] rounded-[8px] cursor-pointer mr-[-2px] relative;
   &:hover {
     @apply bg-[#1F242F];
+  }
+}
+
+.notification {
+  @apply flex flex-row items-start p-[12px] rounded-[8px] gap-[10px];
+  background: linear-gradient(45deg, #42307D 0%, #7F56D9 100%);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  h4 {
+    @apply font-bold;
+  }
+  p {
+    @apply text-[13px];
   }
 }

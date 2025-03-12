@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Transaction } from '@solana/web3.js';
 import { SPLToken } from '@neonevm/token-transfer-core';
 import Modal from 'react-modal';
@@ -22,6 +22,7 @@ interface Props {
 }
 
 const excludeTokens = [`So11111111111111111111111111111111111111112`];
+export const AMOUNT_AIRDROP = 20;
 
 function TokensModal(props: Props) {
   const { openModal, closeModal, tokensList, excludedToken, updateTokenBalance } = props;
@@ -57,6 +58,10 @@ function TokensModal(props: Props) {
     return tokensList.filter(t => t.token.symbol !== excludedToken);
   }, [tokensList, excludedToken]);
 
+  const isShowNotification = useMemo(() => {
+    return !!solanaUser && tokens.some(t => AMOUNT_AIRDROP > (t.balance?.uiAmount ?? 0));
+  }, [tokens, solanaUser]);
+
   return (
     <Modal isOpen={openModal} onRequestClose={handleCloseModal}
            className="Modal"
@@ -71,7 +76,18 @@ function TokensModal(props: Props) {
         </div>
         <div className="tokens-content">
           {tokens.map(((token, key) =>
-            <TokenItem token={token} tokenSelect={tokenSelect} tokenAirdrop={tokenAirdrop} key={key} />))}
+            <TokenItem token={token} tokenSelect={tokenSelect} tokenAirdrop={tokenAirdrop}
+                       key={key} />))}
+          {isShowNotification && <div className="notification mt-[20px]">
+            <div className="icon">
+              <img src="/assets/icons/gift.svg" alt="Gift..." />
+            </div>
+            <div className="notification-description">
+              <h4>Get tokens for tests</h4>
+              <p>For one wallet, you can request 10 test tokens per minute.</p>
+              <p>You can get up to 20 test tokens.</p>
+            </div>
+          </div>}
         </div>
       </div>
     </Modal>

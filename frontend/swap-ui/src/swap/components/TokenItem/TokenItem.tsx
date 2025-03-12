@@ -6,6 +6,7 @@ import { CTokenBalance, TransactionResponse } from '../../../models';
 import { lastAridropTransactionState } from '../../../api/tokens';
 import { PROXY_ENV } from '../../../environments';
 import './TokenItem.css';
+import { AMOUNT_AIRDROP } from '../TokensModal/TokensModal.tsx';
 
 const TRANSACTION_INTERVAL = 60;
 
@@ -39,8 +40,10 @@ function TokenItem({ token, tokenSelect, tokenAirdrop }: {
   }, [tokenSymbol]);
 
   const showAirdrop = useMemo(() => {
-    return !!solanaUser && !!addresses.airdrop?.includes(token.token.address_spl);
-  }, [addresses.airdrop, token.token.address_spl]);
+    return !!solanaUser &&
+      !!addresses.airdrop?.includes(token.token.address_spl) &&
+      AMOUNT_AIRDROP > (token.balance?.uiAmount ?? 0);
+  }, [token.balance?.uiAmount, token.token.address_spl, solanaUser, addresses.airdrop]);
 
   const delayTransaction = async (timestamp: number): Promise<void> => {
     const remainingTime = Math.floor(Date.now() / 1e3) - timestamp;

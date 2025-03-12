@@ -9,6 +9,7 @@ import {
   TransactionInstruction
 } from '@solana/web3.js';
 import {
+  Account,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createTransferCheckedInstruction,
@@ -22,20 +23,28 @@ import {
 import { parseUnits } from 'ethers';
 import { ResponseError } from '@utils/error';
 import bs58 from 'bs58';
+import { Big } from 'big.js';
+
+export const AMOUNT_AIRDROP = 20;
 
 export async function transferTokens(connection: Connection, bankWallet: Keypair, wallet: PublicKey, tokenAddress: PublicKey, amount: bigint): Promise<string> {
   try {
     const feePayer = wallet;
     const tokenMint = await getMint(connection, tokenAddress);
     const bankTokenAddress = getAssociatedTokenAddressSync(tokenMint.address, bankWallet.publicKey);
-    const walletTokenAddress = getAssociatedTokenAddressSync(tokenMint.address, wallet);
+    const [walletTokenAddress, tokenAccount, ataInstruction] = await getATAInstruction(connection, feePayer, tokenMint.address, wallet);
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
     const transaction = new Transaction({
       recentBlockhash: blockhash,
       feePayer: feePayer
     });
     transaction.lastValidBlockHeight = lastValidBlockHeight;
-    const ataInstruction = await getATAInstruction(connection, feePayer, tokenMint.address, wallet);
+    if (tokenAccount) {
+      const amount = new Big(tokenAccount.amount.toString()).div(10 ** tokenMint.decimals);
+      if (amount.gte(AMOUNT_AIRDROP)) {
+        throw new Error(`Failed: the address has enough tokens: ${amount.toString()}`);
+      }
+    }
     if (ataInstruction) {
       transaction.add(ataInstruction);
     }
@@ -56,7 +65,7 @@ export async function transferTokens(connection: Connection, bankWallet: Keypair
     return bs58.encode(transaction.serialize({ requireAllSignatures: false }));
   } catch (e: any) {
     throw new ResponseError({
-      message: `Failed: token transfer is not supported`,
+      message: `Failed: failed to retrieve the transaction`,
       payload: { error: e.message }
     });
   }
@@ -72,15 +81,17 @@ export async function getATAInstruction(
   confirmOptions?: ConfirmOptions,
   programId = TOKEN_PROGRAM_ID,
   associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID
-): Promise<TransactionInstruction | null> {
+): Promise<[PublicKey, Account | null, TransactionInstruction | null]> {
   const associatedToken = getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve, programId, associatedTokenProgramId);
+  let account: Account | null = null;
+  let instruction: TransactionInstruction | null = null;
   try {
-    await getAccount(connection, associatedToken, commitment, programId);
+    account = await getAccount(connection, associatedToken, commitment, programId);
   } catch (error: unknown) {
     if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
-      return createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint, programId, associatedTokenProgramId);
+      instruction = createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint, programId, associatedTokenProgramId);
     }
   }
 
-  return null;
+  return [associatedToken, account, instruction];
 }
