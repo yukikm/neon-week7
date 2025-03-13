@@ -5,8 +5,8 @@ import { useProxyConnection } from '../../../wallet/Connection';
 import { CTokenBalance, TransactionResponse } from '../../../models';
 import { lastAridropTransactionState } from '../../../api/tokens';
 import { PROXY_ENV } from '../../../environments';
+import { AMOUNT_AIRDROP, AMOUNT_SOL_AIRDROP, EXCLUDED_TOKENS } from '../TokensModal/TokensModal';
 import './TokenItem.css';
-import { AMOUNT_AIRDROP } from '../TokensModal/TokensModal.tsx';
 
 const TRANSACTION_INTERVAL = 60;
 
@@ -40,9 +40,12 @@ function TokenItem({ token, tokenSelect, tokenAirdrop }: {
   }, [tokenSymbol]);
 
   const showAirdrop = useMemo(() => {
+    const balance = token.balance?.uiAmount ?? 0;
+    const excludedToken = EXCLUDED_TOKENS.includes(token.token.address_spl);
     return !!solanaUser &&
       !!addresses.airdrop?.includes(token.token.address_spl) &&
-      AMOUNT_AIRDROP > (token.balance?.uiAmount ?? 0);
+      (!excludedToken && AMOUNT_AIRDROP > balance ||
+        excludedToken && AMOUNT_SOL_AIRDROP > balance);
   }, [token.balance?.uiAmount, token.token.address_spl, solanaUser, addresses.airdrop]);
 
   const delayTransaction = async (timestamp: number): Promise<void> => {

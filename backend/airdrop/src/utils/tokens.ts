@@ -25,7 +25,10 @@ import { ResponseError } from '@utils/error';
 import bs58 from 'bs58';
 import { Big } from 'big.js';
 
-export const AMOUNT_AIRDROP = 20;
+export const AMOUNT_LIMIT = 20;
+export const AMOUNT_SOL_LIMIT = 0.5;
+export const AIRDROP_SOL_LIMIT = 0.1;
+export const EXCLUDED_TOKENS = [`So11111111111111111111111111111111111111112`];
 
 export async function transferTokens(connection: Connection, bankWallet: Keypair, wallet: PublicKey, tokenAddress: PublicKey, amount: bigint): Promise<string> {
   try {
@@ -41,7 +44,8 @@ export async function transferTokens(connection: Connection, bankWallet: Keypair
     transaction.lastValidBlockHeight = lastValidBlockHeight;
     if (tokenAccount) {
       const amount = new Big(tokenAccount.amount.toString()).div(10 ** tokenMint.decimals);
-      if (amount.gte(AMOUNT_AIRDROP)) {
+      const excludedToken = EXCLUDED_TOKENS.includes(tokenAddress.toBase58());
+      if (excludedToken && amount.gte(AMOUNT_LIMIT) || !excludedToken && amount.gte(AMOUNT_SOL_LIMIT)) {
         throw new Error(`Failed: the address has enough tokens: ${amount.toString()}`);
       }
     }

@@ -21,8 +21,11 @@ interface Props {
   updateTokenBalance(token: SPLToken): Promise<void>;
 }
 
-const excludeTokens = [`So11111111111111111111111111111111111111112`];
+export const EXCLUDED_TOKENS = [`So11111111111111111111111111111111111111112`];
 export const AMOUNT_AIRDROP = 20;
+export const AMOUNT_REQUEST = 10;
+export const AMOUNT_SOL_AIRDROP = 0.5;
+export const AMOUNT_SOL_REQUEST = 0.1;
 
 function TokensModal(props: Props) {
   const { openModal, closeModal, tokensList, excludedToken, updateTokenBalance } = props;
@@ -36,7 +39,7 @@ function TokensModal(props: Props) {
   };
 
   const tokenAirdrop = async ({ token }: CTokenBalance): Promise<TransactionResponse> => {
-    const amount = excludeTokens.includes(token.address_spl) ? 0.1 : 10;
+    const amount = EXCLUDED_TOKENS.includes(token.address_spl) ? AMOUNT_SOL_REQUEST : AMOUNT_REQUEST;
     const {
       transaction,
       message,
@@ -85,7 +88,7 @@ function TokensModal(props: Props) {
             <div className="notification-description">
               <h4>Get tokens for tests</h4>
               <p>For one wallet, you can request 10 test tokens per minute.</p>
-              <p>You can get up to 20 test tokens.</p>
+              <p>{`You can get up to ${AMOUNT_AIRDROP} test tokens.`}</p>
             </div>
           </div>}
         </div>
