@@ -5,6 +5,7 @@ import { airdropRouter } from '@services/airdrop/airdrop.routes';
 import { tokensRouter } from '@services/tokens/routes';
 import { config } from 'dotenv';
 import cors from 'cors';
+import packageJson from 'package.json';
 
 config();
 
@@ -23,6 +24,9 @@ app.use('/api/v1/tokens', tokensRouter);
 
 app.get('/status', (req: Request, res: Response) => {
   res.json({ status: 'Ok' });
+});
+app.get('/version', (req: Request, res: Response) => {
+  res.json({ version: packageJson.version });
 });
 
 app.listen(port, () => console.log(`[server]: Server is running at http://localhost:${port}`));
