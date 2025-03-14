@@ -4,8 +4,8 @@ import { errorHandler, logger } from '@utils/log';
 import { airdropRouter } from '@services/airdrop/airdrop.routes';
 import { tokensRouter } from '@services/tokens/routes';
 import { config } from 'dotenv';
+import process from 'node:process';
 import cors from 'cors';
-import packageJson from 'package.json';
 
 config();
 
@@ -26,7 +26,7 @@ app.get('/status', (req: Request, res: Response) => {
   res.json({ status: 'Ok' });
 });
 app.get('/version', (req: Request, res: Response) => {
-  res.json({ version: packageJson.version });
+  res.json({ version: process.env.npm_package_version });
 });
 
 app.listen(port, () => console.log(`[server]: Server is running at http://localhost:${port}`));
