@@ -1,4 +1,4 @@
-import { curveAddressesCurvestand } from '@data';
+import { curveAddressesCurvestand, curveAddressesDevnet } from '@data';
 import { CSPLToken, CurveAddresses, SolanaEnvironment } from '@models';
 import { Request, Response } from 'express';
 import { ResponseError } from '@utils/error';
@@ -17,6 +17,10 @@ export function addressesList(env: SolanaEnvironment): CurveAddresses {
       tokens = curveAddressesCurvestand.tokens;
       break;
     case SolanaEnvironment.devnet:
+      contracts = curveAddressesDevnet.contracts;
+      airdrop = curveAddressesDevnet.airdrop;
+      tokens = curveAddressesDevnet.tokens;
+      break;
     case SolanaEnvironment.mainnet:
     default:
       throw new ResponseError({ code: 404, message: `Error: Network ${env} doesn't exist` });
