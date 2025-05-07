@@ -1,4 +1,4 @@
-# Neon Solana Signature Demo
+# Neon Solana Native Swap Demo
 
 A demonstration of token swaps in Neon EVM using Solana signature verification, showcasing how users with Solana wallets can interact with EVM smart contracts on Neon EVM.
 
@@ -54,8 +54,8 @@ The process flow involves:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/neon-solana-signature-demo.git
-cd neon-solana-signature-demo
+git clone https://github.com/neonlabsorg/neon-solana-native-swap-demo.git
+cd neon-solana-native-swap-demo
 ```
 
 2. Configure environment variables:
